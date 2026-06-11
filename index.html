@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
+        // Option pour éviter les blocages de sécurité liés aux fichiers locaux (CORS)
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
     <style>
@@ -98,7 +99,7 @@
                 <div class="border-b border-slate-200 pb-6">
                     <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
                         <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">1</span>
-                        Dossier Patient
+                        Dossier Patient (Saisie Manuelle)
                     </h2>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="lg:col-span-2">
@@ -213,7 +214,7 @@
         function verifyLicenseKey(keyString) {
             const cleanKey = keyString.replace(/\s+/g, '').toUpperCase();
             const parts = cleanKey.split('-');
-            if (parts.length !== 4 || parts[0] !== 'MAPA') return { valid: false, error: "Format invalide. Exemple: MAPA-2026-CAB-123A", cleanKey };
+            if (parts.length !== 4 || parts[0] !== 'MAPA') return { valid: false, error: "Format invalide.", cleanKey };
             
             const year = parseInt(parts[1], 10);
             const ident = parts[2];
@@ -485,8 +486,9 @@
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
-                const typedarray = new Uint8Array(arrayBuffer);
-                const loadingTask = pdfjsLib.getDocument(typedarray);
+                
+                // On passe un objet {data: ...} robuste sans faire appel à un worker externe
+                const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
                 const pdf = await loadingTask.promise;
                 let fullText = "";
 
@@ -497,10 +499,12 @@
                 }
 
                 let extractedData = { pas24: null, pad24: null, pasJour: null, padJour: null, pasNuit: null, padNuit: null };
-                const textCleanIdent = fullText.replace(/\s+/g, ' ');
+                
+                // Nettoyage extrême : suppression des guillemets et espaces parasites qui cassent le texte
+                const textCleanIdent = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
 
                 if (selectedDevice === 'dms') {
-                    // --- MOTEUR DMS-ABP (Tensions uniquement) ---
+                    // --- MOTEUR DMS-ABP ---
                     const match24Sys = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*130\s*\)/);
                     const match24Dia = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*80\s*\)/);
                     const matchJourSys = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*135\s*\)/);
@@ -515,7 +519,7 @@
                     }
 
                 } else if (selectedDevice === 'abpm50') {
-                    // --- MOTEUR ABPM50 (Tensions uniquement via Enclos) ---
+                    // --- MOTEUR ABPM50 (Tolérance absolue) ---
                     const extractEnclos = (text, startRegex, endRegex) => {
                         const startIdx = text.search(startRegex);
                         if(startIdx === -1) return "";
@@ -524,9 +528,9 @@
                         return text.substring(startIdx, endIdx);
                     };
 
-                    const enclos24 = extractEnclos(textCleanIdent, /\(\s*1\s*\)\s*24 heures/i, /\(\s*2\s*\)\s*Jour/i);
+                    const enclos24 = extractEnclos(textCleanIdent, /\(\s*1\s*\)\s*24\s*heures/i, /\(\s*2\s*\)\s*Jour/i);
                     const enclosJour = extractEnclos(textCleanIdent, /\(\s*2\s*\)\s*Jour/i, /\(\s*3\s*\)\s*Nuit/i);
-                    const enclosNuit = extractEnclos(textCleanIdent, /\(\s*3\s*\)\s*Nuit/i, /\(\s*4\s*\)/i);
+                    const enclosNuit = extractEnclos(textCleanIdent, /\(\s*3\s*\)\s*Nuit/i, /\(\s*4/i);
 
                     const extractValidBP = (enclosStr) => {
                         if(!enclosStr) return null;
@@ -559,7 +563,6 @@
 
                     statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Extraction MAPA réussie.</span>";
                     
-                    // La validation va vérifier si l'utilisateur a bien rempli l'identité manuellement
                     if (!validateInputs()) return;
                     
                     await generateAndMergePDF();
@@ -574,14 +577,13 @@
 
             } catch (err) {
                 console.error(err);
-                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Échec de lecture. Mode manuel activé.</span>";
+                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Échec de lecture du PDF. Mode manuel activé.</span>";
                 manualSection.classList.remove('hidden');
             }
         });
 
         // --- VALIDATION GLOBALE AVANT GÉNÉRATION ---
         function validateInputs() {
-            // S'assure que l'identité (manuelle) et les tensions (extraites) sont présentes
             const requiredIds = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit'];
             let isValid = true;
 
@@ -596,7 +598,7 @@
             });
 
             if (!isValid) {
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-600 font-bold'>Génération bloquée : Veuillez remplir l'identité ou les champs encadrés en rouge.</span>";
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-600 font-bold'>Génération bloquée : Veuillez remplir l'identité et les champs encadrés en rouge.</span>";
                 document.getElementById('manualSection').classList.remove('hidden');
                 document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth' });
             }
