@@ -135,7 +135,7 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Modèle de l'appareil MAPA</label>
                             <select id="deviceModel" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 bg-white font-medium text-slate-700">
-                                <option value="dms">DMS-ABP (Format avec cibles < 130)</option>
+                                <option value="dms">DMS-ABP (Format avec cibles &lt; 130)</option>
                                 <option value="abpm50">ABPM50 (Format blocs numérotés)</option>
                             </select>
                         </div>
@@ -166,21 +166,21 @@
                     <h3 class="text-md font-bold text-slate-700 mb-4 border-b pb-2">Valeurs des Moyennes Tensionnelles (mmHg)</h3>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="bg-white p-4 rounded-lg border shadow-sm">
-                            <h4 class="text-sm font-semibold text-slate-700 mb-3 text-center">Période 24H (< 130/80)</h4>
+                            <h4 class="text-sm font-semibold text-slate-700 mb-3 text-center">Période 24H (&lt; 130/80)</h4>
                             <div class="flex space-x-2">
                                 <div><label class="block text-xs text-slate-500">PAS</label><input type="number" id="pas24" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                                 <div><label class="block text-xs text-slate-500">PAD</label><input type="number" id="pad24" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                             </div>
                         </div>
                         <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100 shadow-sm">
-                            <h4 class="text-sm font-semibold text-yellow-700 mb-3 text-center">Diurne (< 135/85)</h4>
+                            <h4 class="text-sm font-semibold text-yellow-700 mb-3 text-center">Diurne (&lt; 135/85)</h4>
                             <div class="flex space-x-2">
                                 <div><label class="block text-xs text-yellow-600">PAS</label><input type="number" id="pasJour" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                                 <div><label class="block text-xs text-yellow-600">PAD</label><input type="number" id="padJour" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                             </div>
                         </div>
                         <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 shadow-sm">
-                            <h4 class="text-sm font-semibold text-indigo-700 mb-3 text-center">Nocturne (< 120/70)</h4>
+                            <h4 class="text-sm font-semibold text-indigo-700 mb-3 text-center">Nocturne (&lt; 120/70)</h4>
                             <div class="flex space-x-2">
                                 <div><label class="block text-xs text-indigo-600">PAS</label><input type="number" id="pasNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                                 <div><label class="block text-xs text-indigo-600">PAD</label><input type="number" id="padNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
@@ -212,7 +212,6 @@
 
         function verifyLicenseKey(keyString) {
             const cleanKey = keyString.replace(/\s+/g, '').toUpperCase();
-            
             const parts = cleanKey.split('-');
             if (parts.length !== 4 || parts[0] !== 'MAPA') return { valid: false, error: "Format invalide. Exemple: MAPA-2026-CAB-123A", cleanKey };
             
@@ -241,7 +240,6 @@
             sessionStorage.setItem('mapaUnlocked', 'true');
             securityOverlay.classList.add('opacity-0', 'pointer-events-none');
             setTimeout(() => securityOverlay.classList.add('hidden'), 300);
-            
             mainApp.classList.remove('blur-sm', 'pointer-events-none');
             bodyContainer.classList.remove('locked-app');
         }
@@ -251,10 +249,8 @@
             securityOverlay.classList.remove('hidden');
             void securityOverlay.offsetWidth;
             securityOverlay.classList.remove('opacity-0', 'pointer-events-none');
-            
             mainApp.classList.add('blur-sm', 'pointer-events-none');
             bodyContainer.classList.add('locked-app');
-            
             checkSecurityState();
         }
 
@@ -305,7 +301,6 @@
                 unlockScreen.classList.remove('hidden');
                 document.getElementById('pinUnlockInput').value = "";
                 document.getElementById('pinUnlockInput').focus();
-                
                 if (window.PublicKeyCredential) {
                     document.getElementById('btnBio').classList.remove('hidden');
                 }
@@ -321,7 +316,6 @@
                 errBox.classList.remove('hidden', 'text-red-500');
                 errBox.classList.add('text-green-600');
                 errBox.innerText = "✅ Licence validée avec succès !";
-                
                 setTimeout(() => {
                     errBox.classList.add('hidden');
                     errBox.classList.remove('text-green-600');
@@ -415,17 +409,6 @@
             if (localStorage.getItem('cabinetSignature')) document.getElementById('sigStatus').classList.remove('hidden');
         });
 
-        document.getElementById('dobPatient').addEventListener('change', function() {
-            if(!this.value) return;
-            const dob = new Date(this.value);
-            const today = new Date();
-            let calculatedAge = today.getFullYear() - dob.getFullYear();
-            const m = today.getMonth() - dob.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calculatedAge--;
-            document.getElementById('age').value = calculatedAge;
-            document.getElementById('age').classList.remove('border-red-500', 'ring-1', 'ring-red-500');
-        });
-
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
         const btnManual = document.getElementById('btnManual');
@@ -456,7 +439,7 @@
         });
 
         // ==========================================
-        // MOTEUR D'EXTRACTION DOUBLE (DMS-ABP & ABPM50)
+        // MOTEUR D'EXTRACTION DOUBLE POSITIONNEL
         // ==========================================
         btnAuto.addEventListener('click', async () => {
             const file = pdfUpload.files[0];
@@ -479,19 +462,19 @@
                 }
 
                 let extractedData = { pas24: null, pad24: null, pasJour: null, padJour: null, pasNuit: null, padNuit: null, nom: "", age: "" };
+                const textCleanIdent = fullText.replace(/\s+/g, ' ');
 
                 if (selectedDevice === 'dms') {
                     // --- MOTEUR DMS-ABP ---
-                    const textClean = fullText.replace(/\s+/g, ' ');
-                    const match24Sys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*130\s*\)/);
-                    const match24Dia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*80\s*\)/);
-                    const matchJourSys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*135\s*\)/);
-                    const matchJourDia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*85\s*\)/);
-                    const matchNuitSys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*120\s*\)/);
-                    const matchNuitDia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*70\s*\)/);
+                    const match24Sys = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*130\s*\)/);
+                    const match24Dia = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*80\s*\)/);
+                    const matchJourSys = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*135\s*\)/);
+                    const matchJourDia = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*85\s*\)/);
+                    const matchNuitSys = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*120\s*\)/);
+                    const matchNuitDia = textCleanIdent.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*70\s*\)/);
 
-                    const nomMatch = textClean.match(/Nom\s*Patient\s*:\s*(.*?)\s*(?:ID\s*Patient|Age)/i);
-                    const ageMatch = textClean.match(/Age\s*:\s*(\d+)/i);
+                    const nomMatch = textCleanIdent.match(/Nom\s*Patient\s*:\s*(.*?)\s*(?:ID\s*Patient|Age)/i);
+                    const ageMatch = textCleanIdent.match(/Age\s*:\s*(\d+)/i);
 
                     if (match24Sys && match24Dia && matchJourSys && matchJourDia && matchNuitSys && matchNuitDia) {
                         extractedData.pas24 = match24Sys[1]; extractedData.pad24 = match24Dia[1];
@@ -502,17 +485,16 @@
                     if (ageMatch) extractedData.age = ageMatch[1];
 
                 } else if (selectedDevice === 'abpm50') {
-                    // --- MOTEUR ABPM50 (Technique des Enclos Pures avec Filtrage Brut) ---
-                    const textCleanIdent = fullText.replace(/\s+/g, ' ');
+                    // --- MOTEUR ABPM50 COMPORTEMENT EXTRÊME VALIDÉ ---
                     
                     // Identité
-                    const nomMatch = textCleanIdent.match(/Nom\s*:([\s\S]*?)(?:Homme|Femme|Female|Male|Age|\$|Kobe|N°)/i);
-                    if (nomMatch) extractedData.nom = nomMatch[1].trim().replace(/\//g, '').replace(/Homme/i, '').replace(/Femme/i, '');
+                    const nomMatch = textCleanIdent.match(/Nom\s*:([\s\S]*?)(?:\$N|Age|Kobe|N°|ID)/i);
+                    if (nomMatch) extractedData.nom = nomMatch[1].replace(/Homme\/?\s*Femme\s*:/ig, '').trim();
                     
-                    const ageMatch = textCleanIdent.match(/Age\s*:(?:.*?Female|.*?Male|.*?Homme|.*?Femme)?\s*(\d{2})/i);
+                    const ageMatch = textCleanIdent.match(/Age\s*:.*?(\d{2})/i);
                     if (ageMatch) extractedData.age = ageMatch[1];
 
-                    // Fonction d'isolement par blocs (ignorant le désordre intérieur)
+                    // Isolement par enclos structurels (Tolérance des espaces comme "( 3) Nuit")
                     const extractEnclos = (text, startRegex, endRegex) => {
                         const startIdx = text.search(startRegex);
                         if(startIdx === -1) return "";
@@ -521,20 +503,18 @@
                         return text.substring(startIdx, endIdx);
                     };
 
-                    const enclos24 = extractEnclos(textCleanIdent, /\(1\)\s*24 heures/i, /\(2\)\s*Jour/i);
-                    const enclosJour = extractEnclos(textCleanIdent, /\(2\)\s*Jour/i, /\(3\)\s*Nuit/i);
-                    const enclosNuit = extractEnclos(textCleanIdent, /\(3\)\s*Nuit/i, /\(4\)/i);
+                    const enclos24 = extractEnclos(textCleanIdent, /\(\s*1\s*\)\s*24 heures/i, /\(\s*2\s*\)\s*Jour/i);
+                    const enclosJour = extractEnclos(textCleanIdent, /\(\s*2\s*\)\s*Jour/i, /\(\s*3\s*\)\s*Nuit/i);
+                    const enclosNuit = extractEnclos(textCleanIdent, /\(\s*3\s*\)\s*Nuit/i, /\(\s*4\s*\)/i);
 
-                    // Fonction de filtrage mathématique des valeurs
+                    // Filtrage mathématique strict (Destruction des seuils ESC)
                     const extractValidBP = (enclosStr) => {
                         if(!enclosStr) return null;
                         const matches = [...enclosStr.matchAll(/(\d{2,3})\s*\/\s*(\d{2,3})/g)];
                         for(let m of matches) {
                             const s = parseInt(m[1]); const d = parseInt(m[2]);
-                            // Destruction absolue des seuils fixes
-                            if ((s===130 && d===80) || (s===135 && d===85) || (s===120 && d===70)) continue; 
-                            // Destruction des valeurs physiquement impossibles (dates, etc)
-                            if (s < 70 || s > 250 || d < 30 || d > 150) continue; 
+                            if ((s===130 && d===80) || (s===135 && d===85) || (s===120 && d===70)) continue;
+                            if (s < 70 || s > 250 || d < 30 || d > 150) continue;
                             return {sys: s, dia: d};
                         }
                         return null;
@@ -560,15 +540,13 @@
                     document.getElementById('pasNuit').value = extractedData.pasNuit;
                     document.getElementById('padNuit').value = extractedData.padNuit;
 
-                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Extraction réussie. Contrôle de sécurité en cours...</span>";
-                    
+                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Extraction réussie.</span>";
                     if (!validateInputs()) return;
-
                     await generateAndMergePDF();
                     statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Document traité et téléchargé avec succès !</span>";
                     manualSection.classList.remove('hidden'); 
                 } else {
-                    statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Ambiguïté textuelle ou norme exacte. Vérification manuelle requise.</span>";
+                    statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Vérification manuelle requise.</span>";
                     manualSection.classList.remove('hidden');
                     manualSection.scrollIntoView({ behavior: 'smooth' });
                     validateInputs(); 
@@ -576,7 +554,7 @@
 
             } catch (err) {
                 console.error(err);
-                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Échec de lecture. Utilisation du mode manuel.</span>";
+                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Échec de lecture. Mode manuel activé.</span>";
                 manualSection.classList.remove('hidden');
             }
         });
