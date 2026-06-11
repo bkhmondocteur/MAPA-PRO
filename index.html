@@ -5,15 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DocPocket - Interprétation MAPA ESC 2024</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
     <style>
-        /* Masquer le contenu principal tant que non déverrouillé */
         .locked-app { overflow: hidden; height: 100vh; }
         .blur-sm { filter: blur(4px); }
     </style>
@@ -33,21 +30,21 @@
             <p id="secSubtitle" class="text-slate-500 mb-6">Authentification requise</p>
 
             <div id="licenceScreen" class="hidden space-y-4">
-                <p class="text-sm text-slate-600 mb-4">Veuillez entrer votre clé de licence logicielle pour le premier lancement.</p>
-                <input type="text" id="licenceInput" placeholder="EX: DOCPOCKET-2026" class="w-full border border-slate-300 rounded-lg p-3 text-center font-mono uppercase focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                <p class="text-sm text-slate-600 mb-4">Veuillez entrer votre clé de licence logicielle pour activer l'appareil.</p>
+                <input type="text" id="licenceInput" placeholder="MAPA-XXXX-XXXX-XXXX" class="w-full border border-slate-300 rounded-lg p-3 text-center font-mono uppercase focus:ring-2 focus:ring-blue-500 outline-none" autocomplete="off">
                 <button id="btnLicence" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Valider la licence</button>
-                <p id="licenceError" class="text-red-500 text-sm hidden font-medium"></p>
+                <p id="licenceError" class="text-sm hidden font-medium transition-colors"></p>
             </div>
 
             <div id="pinSetupScreen" class="hidden space-y-4">
-                <p class="text-sm text-slate-600 mb-4">Créez un code PIN à 4 chiffres pour protéger l'accès médical.</p>
-                <input type="password" id="pinSetupInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500" autocomplete="off" inputmode="numeric">
+                <p class="text-sm text-slate-600 mb-4">Créez un code PIN à 4 chiffres pour protéger l'accès quotidien.</p>
+                <input type="password" id="pinSetupInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500 outline-none" autocomplete="off" inputmode="numeric">
                 <button id="btnPinSetup" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Enregistrer le PIN</button>
             </div>
 
             <div id="unlockScreen" class="hidden space-y-4">
                 <p class="text-sm text-slate-600 mb-4">Entrez votre code PIN pour accéder à la session.</p>
-                <input type="password" id="pinUnlockInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500" autocomplete="off" inputmode="numeric">
+                <input type="password" id="pinUnlockInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500 outline-none" autocomplete="off" inputmode="numeric">
                 <div class="flex gap-2">
                     <button id="btnUnlock" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Déverrouiller</button>
                     <button id="btnBio" class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3 rounded-lg transition hidden" title="Utiliser la biométrie">
@@ -201,9 +198,9 @@
 
     <script>
         // ==========================================
-        // GESTION DE LA SÉCURITÉ (Licence, PIN, Biométrie)
+        // GESTION DE LA SÉCURITÉ (Licence Crypto, PIN, Biométrie)
         // ==========================================
-        const VALID_LICENSE = "DOCPOCKET-2026";
+        const SECRET_SALT = "MAHDIA_ESC2024_SECURE";
         
         const securityOverlay = document.getElementById('securityOverlay');
         const mainApp = document.getElementById('mainApp');
@@ -212,6 +209,34 @@
         const licenceScreen = document.getElementById('licenceScreen');
         const pinSetupScreen = document.getElementById('pinSetupScreen');
         const unlockScreen = document.getElementById('unlockScreen');
+
+        function verifyLicenseKey(keyString) {
+            // Destruction radicale des espaces invisibles du copier/coller
+            const cleanKey = keyString.replace(/\s+/g, '').toUpperCase();
+            
+            const parts = cleanKey.split('-');
+            if (parts.length !== 4 || parts[0] !== 'MAPA') return { valid: false, error: "Format invalide. Exemple: MAPA-2026-CAB-123A", cleanKey };
+            
+            const year = parseInt(parts[1], 10);
+            const ident = parts[2];
+            const providedSignature = parts[3];
+
+            const currentYear = new Date().getFullYear();
+            if (year < currentYear) return { valid: false, error: "Cette licence a expiré.", cleanKey };
+
+            const textToHash = `${year}-${ident}-${SECRET_SALT}`;
+            let hash = 0;
+            for (let i = 0; i < textToHash.length; i++) {
+                hash = ((hash << 5) - hash) + textToHash.charCodeAt(i);
+                hash |= 0;
+            }
+            let expectedSignature = Math.abs(hash).toString(16).toUpperCase();
+            while(expectedSignature.length < 4) expectedSignature = "0" + expectedSignature;
+            expectedSignature = expectedSignature.substring(0, 4);
+
+            if (providedSignature === expectedSignature) return { valid: true, cleanKey };
+            return { valid: false, error: "Clé falsifiée ou invalide.", cleanKey };
+        }
 
         function unlockApp() {
             sessionStorage.setItem('mapaUnlocked', 'true');
@@ -225,7 +250,6 @@
         function lockApp() {
             sessionStorage.removeItem('mapaUnlocked');
             securityOverlay.classList.remove('hidden');
-            // Force reflow
             void securityOverlay.offsetWidth;
             securityOverlay.classList.remove('opacity-0', 'pointer-events-none');
             
@@ -235,11 +259,9 @@
             checkSecurityState();
         }
 
-        // Simule l'appel WebAuthn pour le client statique
         async function triggerBiometrics() {
             if (window.PublicKeyCredential) {
                 try {
-                    // Création d'un challenge dummy pour simuler l'appel capteur
                     const publicKeyCredentialRequestOptions = {
                         challenge: new Uint8Array(32),
                         timeout: 60000,
@@ -248,7 +270,7 @@
                     await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
                     return true;
                 } catch (err) {
-                    console.log("Biométrie ignorée ou non configurée :", err);
+                    console.log("Biométrie annulée ou erreur :", err);
                     return false;
                 }
             }
@@ -265,45 +287,68 @@
                 return;
             }
 
-            if (!localStorage.getItem('mapaLicense')) {
+            const storedLicense = localStorage.getItem('mapaLicenseData');
+            let isLicenseValid = false;
+            
+            if (storedLicense) {
+                const check = verifyLicenseKey(storedLicense);
+                if (check.valid) isLicenseValid = true;
+                else localStorage.removeItem('mapaLicenseData');
+            }
+
+            if (!isLicenseValid) {
                 licenceScreen.classList.remove('hidden');
+                document.getElementById('licenceInput').focus();
             } else if (!localStorage.getItem('mapaPin')) {
                 pinSetupScreen.classList.remove('hidden');
+                document.getElementById('pinSetupInput').focus();
             } else {
                 unlockScreen.classList.remove('hidden');
                 document.getElementById('pinUnlockInput').value = "";
                 document.getElementById('pinUnlockInput').focus();
                 
-                // Active l'option biométrique si le navigateur la supporte
                 if (window.PublicKeyCredential) {
                     document.getElementById('btnBio').classList.remove('hidden');
                 }
             }
         }
 
-        // Events Sécurité
-        document.getElementById('btnLicence').addEventListener('click', () => {
-            const val = document.getElementById('licenceInput').value.trim().toUpperCase();
-            if (val === VALID_LICENSE) {
-                localStorage.setItem('mapaLicense', 'true');
-                checkSecurityState();
+        // Actions UI Sécurité
+        const handleLicenceSubmit = () => {
+            const inputVal = document.getElementById('licenceInput').value;
+            const verification = verifyLicenseKey(inputVal);
+            const errBox = document.getElementById('licenceError');
+            
+            if (verification.valid) {
+                errBox.classList.remove('hidden', 'text-red-500');
+                errBox.classList.add('text-green-600');
+                errBox.innerText = "✅ Licence validée avec succès !";
+                
+                // Transition visuelle pour éviter la confusion
+                setTimeout(() => {
+                    errBox.classList.add('hidden');
+                    errBox.classList.remove('text-green-600');
+                    errBox.classList.add('text-red-500');
+                    localStorage.setItem('mapaLicenseData', verification.cleanKey);
+                    checkSecurityState();
+                }, 1200);
             } else {
-                document.getElementById('licenceError').classList.remove('hidden');
-                document.getElementById('licenceError').innerText = "Licence invalide.";
+                errBox.classList.remove('hidden');
+                errBox.innerText = "❌ " + verification.error;
             }
-        });
+        };
 
-        document.getElementById('btnPinSetup').addEventListener('click', () => {
+        const handlePinSetupSubmit = () => {
             const pin = document.getElementById('pinSetupInput').value.trim();
             if (pin.length === 4 && /^\d+$/.test(pin)) {
                 localStorage.setItem('mapaPin', pin);
                 checkSecurityState();
             } else {
-                alert("Le PIN doit contenir 4 chiffres.");
+                alert("Le PIN doit contenir exactement 4 chiffres.");
             }
-        });
+        };
 
-        document.getElementById('btnUnlock').addEventListener('click', () => {
+        const handleUnlockSubmit = () => {
             const pin = document.getElementById('pinUnlockInput').value.trim();
             if (pin === localStorage.getItem('mapaPin')) {
                 document.getElementById('unlockError').classList.add('hidden');
@@ -311,7 +356,17 @@
             } else {
                 document.getElementById('unlockError').classList.remove('hidden');
             }
-        });
+        };
+
+        // Click Events
+        document.getElementById('btnLicence').addEventListener('click', handleLicenceSubmit);
+        document.getElementById('btnPinSetup').addEventListener('click', handlePinSetupSubmit);
+        document.getElementById('btnUnlock').addEventListener('click', handleUnlockSubmit);
+        
+        // Enter Key Events
+        document.getElementById('licenceInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLicenceSubmit(); });
+        document.getElementById('pinSetupInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') handlePinSetupSubmit(); });
+        document.getElementById('pinUnlockInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleUnlockSubmit(); });
 
         document.getElementById('btnBio').addEventListener('click', async () => {
             const success = await triggerBiometrics();
@@ -329,15 +384,12 @@
             document.getElementById('statusMsg').innerHTML = "";
             btnAuto.disabled = true;
             btnAuto.classList.add('opacity-50', 'cursor-not-allowed');
-            // Retrait des bordures rouges d'erreur
             document.querySelectorAll('.validate-target').forEach(el => {
                 el.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
             });
         });
 
-        // Initialize App Security
         checkSecurityState();
-
 
         // ==========================================
         // CONFIGURATIONS ET OUTILS GÉNÉRAUX
@@ -402,7 +454,6 @@
             manualSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
 
-        // Nettoyage visuel rouge sur saisie
         document.querySelectorAll('.validate-target').forEach(input => {
             input.addEventListener('input', function() {
                 this.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
@@ -435,7 +486,7 @@
                 let extractedData = { pas24: null, pad24: null, pasJour: null, padJour: null, pasNuit: null, padNuit: null, nom: "", age: "" };
 
                 if (selectedDevice === 'dms') {
-                    // --- STRATÉGIE PARSER DMS-ABP ---
+                    // --- MOTEUR DMS-ABP ---
                     const textClean = fullText.replace(/\s+/g, ' ');
                     const match24Sys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*130\s*\)/);
                     const match24Dia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*80\s*\)/);
@@ -456,9 +507,7 @@
                     if (ageMatch) extractedData.age = ageMatch[1];
 
                 } else if (selectedDevice === 'abpm50') {
-                    // --- STRATÉGIE PARSER ABPM50 (Technique des Enclos Sécurisés) ---
-                    
-                    // Nettoyage de l'identité anti-fragmentation
+                    // --- MOTEUR ABPM50 (Enclos Sécurisés) ---
                     const textCleanIdent = fullText.replace(/\s+/g, ' ');
                     const nomMatch = textCleanIdent.match(/Nom\s*:([\s\S]*?)(?:Homme|Femme|Female|Male|Age|\$|Kobe|N°)/i);
                     if (nomMatch) extractedData.nom = nomMatch[1].trim().replace(/\//g, '').replace(/Homme/i, '').replace(/Femme/i, '');
@@ -466,12 +515,10 @@
                     const ageMatch = textCleanIdent.match(/Age\s*:(?:.*?Female|.*?Male|.*?Homme|.*?Femme)?\s*(\d{2})/i);
                     if (ageMatch) extractedData.age = ageMatch[1];
 
-                    // Extraction chirurgicale des moyennes via l'enclos "BP Moy"
                     const block24 = textCleanIdent.match(/24\s*heures[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
                     const blockJour = textCleanIdent.match(/Jour[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
                     const blockNuit = textCleanIdent.match(/Nuit[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
 
-                    // Routine d'exclusion si la moyenne détectée est le seuil imprimé
                     const checkNorm = (sys, dia) => {
                         const s = parseInt(sys); const d = parseInt(dia);
                         if ((s===130 && d===80) || (s===135 && d===85) || (s===120 && d===70)) return false;
@@ -489,7 +536,6 @@
                     }
                 }
 
-                // Distribution UI
                 if (extractedData.nom) document.getElementById('nomPatient').value = extractedData.nom;
                 if (extractedData.age) document.getElementById('age').value = extractedData.age;
 
@@ -512,7 +558,7 @@
                     statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Ambiguïté textuelle ou norme exacte. Vérification manuelle requise.</span>";
                     manualSection.classList.remove('hidden');
                     manualSection.scrollIntoView({ behavior: 'smooth' });
-                    validateInputs(); // Met en rouge les cases vides
+                    validateInputs(); 
                 }
 
             } catch (err) {
