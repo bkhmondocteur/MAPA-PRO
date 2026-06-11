@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocPocket - Interprétation MAPA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
+        
+        <div class="bg-slate-800 p-6 text-white text-center">
+            <h1 class="text-2xl font-bold tracking-wide">Module MAPA - ESC 2024</h1>
+            <p class="text-slate-300 text-sm mt-1">Complexe médical Dar Attabib</p>
+        </div>
+
+        <div class="p-6 md:p-8">
+            <form id="mapaForm" class="space-y-8">
+                
+                <details class="border border-blue-100 bg-blue-50/30 p-4 rounded-lg shadow-sm">
+                    <summary class="text-sm font-semibold text-blue-800 cursor-pointer flex items-center outline-none">
+                        ⚙️ Paramètres d'Identité Visuelle (Logo & Signature)
+                    </summary>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Logo du cabinet</label>
+                            <input type="file" id="logoUpload" accept="image/png, image/jpeg" class="w-full text-xs text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-700">
+                            <p id="logoStatus" class="text-xs text-green-600 mt-1 hidden">✓ Mémorisé</p>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Tampon & Signature</label>
+                            <input type="file" id="signatureUpload" accept="image/png, image/jpeg" class="w-full text-xs text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-700">
+                            <p id="sigStatus" class="text-xs text-green-600 mt-1 hidden">✓ Mémorisé</p>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="border-b border-slate-200 pb-6">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">1</span>
+                        Dossier Patient
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Nom</label>
+                            <input type="text" id="nomPatient" required class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Prénom</label>
+                            <input type="text" id="prenomPatient" required class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Téléphone</label>
+                            <input type="tel" id="telPatient" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Date de naissance</label>
+                            <input type="date" id="dobPatient" required class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Âge (calculé)</label>
+                            <input type="number" id="age" readonly class="w-full border border-slate-200 bg-slate-100 rounded-lg p-2 text-slate-600 font-bold">
+                        </div>
+                        <div class="flex flex-col justify-end space-y-2 pb-2">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="isFrail" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                                <span class="ml-2 text-slate-700 text-sm font-medium">Sujet âgé fragile</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border-b border-slate-200 pb-6">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">2</span>
+                        Document MAPA
+                    </h2>
+                    <input type="file" id="pdfUpload" accept="application/pdf" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer hover:bg-slate-50">
+                </div>
+
+                <div class="border-b border-slate-200 pb-6">
+                    <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
+                        <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">3</span>
+                        Mode d'Interprétation
+                    </h2>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <button type="button" id="btnAuto" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-md flex justify-center items-center opacity-50 cursor-not-allowed" disabled>
+                            ⚡ Interprétation Automatique
+                        </button>
+                        <button type="button" id="btnManual" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-md flex justify-center items-center">
+                            ✍️ Interprétation Manuelle
+                        </button>
+                    </div>
+                    <p id="statusMsg" class="text-center text-sm mt-3 text-slate-500 font-medium"></p>
+                </div>
+
+                <div id="manualSection" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 mb-6">
+                    <h3 class="text-md font-bold text-slate-700 mb-4 border-b pb-2">Saisie Guidée des Moyennes (mmHg)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white p-4 rounded-lg border shadow-sm">
+                            <h4 class="text-sm font-semibold text-slate-700 mb-3 text-center">Période 24H</h4>
+                            <div class="flex space-x-2">
+                                <div><label class="block text-xs text-slate-500">PAS</label><input type="number" id="pas24" class="w-full border rounded p-2 text-center font-bold text-slate-700"></div>
+                                <div><label class="block text-xs text-slate-500">PAD</label><input type="number" id="pad24" class="w-full border rounded p-2 text-center font-bold text-slate-700"></div>
+                            </div>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100 shadow-sm">
+                            <h4 class="text-sm font-semibold text-yellow-700 mb-3 text-center">Diurne (Jour)</h4>
+                            <div class="flex space-x-2">
+                                <div><label class="block text-xs text-yellow-600">PAS</label><input type="number" id="pasJour" class="w-full border rounded p-2 text-center font-bold text-slate-700"></div>
+                                <div><label class="block text-xs text-yellow-600">PAD</label><input type="number" id="padJour" class="w-full border rounded p-2 text-center font-bold text-slate-700"></div>
+                            </div>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 shadow-sm">
+                            <h4 class="text-sm font-semibold text-indigo-700 mb-3 text-center">Nocturne (Nuit)</h4>
+                            <div class="flex space-x-2">
+                                <div><label class="block text-xs text-indigo-600">PAS</label><input type="number" id="pasNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700"></div>
+                                <div><label class="block text-xs text-indigo-600">PAD</label><input type="number" id="padNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" id="generateManualBtn" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition shadow">
+                        Générer le compte-rendu
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. LOCAL STORAGE IMAGES ---
+        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+        document.getElementById('logoUpload').addEventListener('change', async (e) => {
+            if (e.target.files[0]) {
+                localStorage.setItem('cabinetLogo', await fileToBase64(e.target.files[0]));
+                document.getElementById('logoStatus').classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('signatureUpload').addEventListener('change', async (e) => {
+            if (e.target.files[0]) {
+                localStorage.setItem('cabinetSignature', await fileToBase64(e.target.files[0]));
+                document.getElementById('sigStatus').classList.remove('hidden');
+            }
+        });
+
+        window.onload = () => {
+            if (localStorage.getItem('cabinetLogo')) document.getElementById('logoStatus').classList.remove('hidden');
+            if (localStorage.getItem('cabinetSignature')) document.getElementById('sigStatus').classList.remove('hidden');
+        };
+
+        // --- 2. CALCUL AUTOMATIQUE DE L'ÂGE ---
+        document.getElementById('dobPatient').addEventListener('change', function() {
+            if(!this.value) return;
+            const dob = new Date(this.value);
+            const today = new Date();
+            let calculatedAge = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                calculatedAge--;
+            }
+            document.getElementById('age').value = calculatedAge;
+        });
+
+        // --- 3. GESTION DES MODES (AUTO / MANUEL) ---
+        const pdfUpload = document.getElementById('pdfUpload');
+        const btnAuto = document.getElementById('btnAuto');
+        const btnManual = document.getElementById('btnManual');
+        const manualSection = document.getElementById('manualSection');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // Déverrouiller le bouton Auto seulement si un PDF est uploadé
+        pdfUpload.addEventListener('change', () => {
+            if (pdfUpload.files[0]) {
+                btnAuto.disabled = false;
+                btnAuto.classList.remove('opacity-50', 'cursor-not-allowed');
+                statusMsg.innerHTML = "PDF chargé. Prêt pour l'analyse.";
+            } else {
+                btnAuto.disabled = true;
+                btnAuto.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        });
+
+        // Activation du mode Manuel
+        btnManual.addEventListener('click', () => {
+            manualSection.classList.remove('hidden');
+            statusMsg.innerHTML = "";
+            // Scroll fluide vers la zone de saisie
+            manualSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // --- 4. MODE AUTOMATIQUE (Extraction + Génération directe) ---
+        btnAuto.addEventListener('click', async () => {
+            // Validation préalable
+            if (!document.getElementById('nomPatient').value || !document.getElementById('prenomPatient').value || !document.getElementById('age').value) {
+                alert("Veuillez d'abord remplir le nom, prénom et la date de naissance.");
+                return;
+            }
+
+            const file = pdfUpload.files[0];
+            if (!file) return;
+
+            statusMsg.innerHTML = "<span class='text-blue-600 font-bold'>Analyse du PDF en cours...</span>";
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                let fullText = "";
+
+                // Scanner les 2 premières pages
+                for (let i = 1; i <= Math.min(pdf.numPages, 2); i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    fullText += content.items.map(item => item.str).join(" ") + " ";
+                }
+
+                // REGEX calibrés pour DMS-ABP (Cherche le motif : <130, <135, <120)
+                const regex24 = /(\d{2,3})\s*\([\d.]+\)\s*\(<130\)\s*(\d{2,3})/;
+                const regexJour = /(\d{2,3})\s*\([\d.]+\)\s*\(<135\)\s*(\d{2,3})/;
+                const regexNuit = /(\d{2,3})\s*\([\d.]+\)\s*\(<120\)\s*(\d{2,3})/;
+
+                const match24 = fullText.match(regex24);
+                const matchJour = fullText.match(regexJour);
+                const matchNuit = fullText.match(regexNuit);
+
+                if (match24 && matchJour && matchNuit) {
+                    // Remplissage invisible des champs pour que la fonction de génération les trouve
+                    document.getElementById('pas24').value = match24[1];
+                    document.getElementById('pad24').value = match24[2];
+                    document.getElementById('pasJour').value = matchJour[1];
+                    document.getElementById('padJour').value = matchJour[2];
+                    document.getElementById('pasNuit').value = matchNuit[1];
+                    document.getElementById('padNuit').value = matchNuit[2];
+
+                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Succès ! Génération du compte-rendu en cours...</span>";
+                    
+                    // Lancer la génération directement
+                    await generateAndMergePDF();
+                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Document généré et téléchargé !</span>";
+
+                } else {
+                    // Échec de l'extraction
+                    statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Format non reconnu. Basculement en mode manuel.</span>";
+                    manualSection.classList.remove('hidden');
+                    manualSection.scrollIntoView({ behavior: 'smooth' });
+                }
+
+            } catch (err) {
+                console.error(err);
+                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Erreur de lecture du PDF. Basculement en mode manuel.</span>";
+                manualSection.classList.remove('hidden');
+            }
+        });
+
+        // Lancement manuel
+        document.getElementById('generateManualBtn').addEventListener('click', async () => {
+            if (!document.getElementById('pas24').value) {
+                alert("Veuillez remplir les chiffres tensionnels.");
+                return;
+            }
+            statusMsg.innerHTML = "<span class='text-blue-600 font-bold'>Génération du compte-rendu...</span>";
+            await generateAndMergePDF();
+            statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Document généré et téléchargé !</span>";
+        });
+
+        // --- 5. FONCTION CENTRALE DE GÉNÉRATION PDF ---
+        async function generateAndMergePDF() {
+            const nomPatient = document.getElementById('nomPatient').value.trim();
+            const prenomPatient = document.getElementById('prenomPatient').value.trim();
+            const fullName = `${nomPatient.toUpperCase()} ${prenomPatient}`;
+            const age = parseInt(document.getElementById('age').value);
+            const isFrail = document.getElementById('isFrail').checked;
+
+            const pas24 = parseFloat(document.getElementById('pas24').value);
+            const pad24 = parseFloat(document.getElementById('pad24').value);
+            const pasJour = parseFloat(document.getElementById('pasJour').value);
+            const pasNuit = parseFloat(document.getElementById('pasNuit').value);
+            const padNuit = parseFloat(document.getElementById('padNuit').value);
+
+            const pp = pas24 - pad24;
+            const dipSys = (((pasJour - pasNuit) / pasJour) * 100).toFixed(1);
+            let dippingProfile = "Dipper";
+            if (dipSys < 0) dippingProfile = "Reverse Dipper";
+            else if (dipSys < 10) dippingProfile = "Non-Dipper";
+            
+            let classification = "TA Non Élevée";
+            if (pas24 >= 130 || pad24 >= 80) classification = "HTA Confirmée";
+            else if ((pas24 >= 120 && pas24 < 130) || (pad24 >= 70 && pad24 < 80)) classification = "TA Élevée";
+
+            const { PDFDocument, rgb, StandardFonts } = PDFLib;
+            
+            let mergedPdf;
+            const pdfFile = document.getElementById('pdfUpload').files[0];
+            
+            if (pdfFile) {
+                const originalPdfBytes = await pdfFile.arrayBuffer();
+                mergedPdf = await PDFDocument.load(originalPdfBytes);
+            } else {
+                mergedPdf = await PDFDocument.create();
+            }
+            
+            const synthDoc = await PDFDocument.create();
+            const page = synthDoc.addPage([595.28, 841.89]);
+            const font = await synthDoc.embedFont(StandardFonts.Helvetica);
+            const fontBold = await synthDoc.embedFont(StandardFonts.HelveticaBold);
+            let currentY = 800;
+
+            const logoBase64 = localStorage.getItem('cabinetLogo');
+            if (logoBase64) {
+                const logoBytes = await fetch(logoBase64).then(res => res.arrayBuffer());
+                let logoImage = logoBase64.includes('jpeg') || logoBase64.includes('jpg') ? await synthDoc.embedJpg(logoBytes) : await synthDoc.embedPng(logoBytes);
+                const logoDims = logoImage.scale(0.3);
+                page.drawImage(logoImage, { x: 40, y: currentY - logoDims.height + 20, width: logoDims.width, height: logoDims.height });
+                currentY -= 40;
+            }
+
+            page.drawText('Dr Hamed BEN KHALIFA', { x: 40, y: currentY, size: 14, font: fontBold, color: rgb(0.1, 0.3, 0.5) });
+            page.drawText('Complexe médical Dar Attabib', { x: 40, y: currentY - 15, size: 10, font: font });
+            page.drawText('Ave Taieb Mhiri Mahdia 5100', { x: 40, y: currentY - 30, size: 10, font: font });
+            currentY -= 80;
+
+            page.drawText('SYNTHÈSE ET DÉCISION THÉRAPEUTIQUE MAPA', { x: 100, y: currentY, size: 14, font: fontBold });
+            currentY -= 40;
+
+            page.drawText(`Patient : ${fullName}`, { x: 40, y: currentY, size: 12, font: fontBold });
+            page.drawText(`Âge : ${age} ans ${isFrail ? '(Sujet fragile)' : ''}`, { x: 300, y: currentY, size: 12, font: font });
+            currentY -= 40;
+
+            page.drawText(`Hémodynamique :`, { x: 40, y: currentY, size: 12, font: fontBold, color: rgb(0.3, 0.3, 0.3) });
+            currentY -= 20;
+            page.drawText(`- Moyenne 24H : ${pas24} / ${pad24} mmHg`, { x: 50, y: currentY, size: 11, font: font });
+            currentY -= 20;
+            page.drawText(`- Dipping Systolique : ${dipSys}% (${dippingProfile})`, { x: 50, y: currentY, size: 11, font: font });
+            currentY -= 20;
+            page.drawText(`- Pression Pulsée : ${pp} mmHg`, { x: 50, y: currentY, size: 11, font: font });
+            currentY -= 40;
+
+            page.drawText('CONCLUSION (Recommandations ESC 2024) :', { x: 40, y: currentY, size: 12, font: fontBold, color: rgb(0.7, 0.1, 0.1) });
+            currentY -= 25;
+            page.drawText(`Diagnostic retenu : ${classification.toUpperCase()}`, { x: 50, y: currentY, size: 12, font: fontBold });
+            currentY -= 25;
+            
+            if(classification.includes("Confirmée")) {
+                page.drawText(`-> Stratégie : Bithérapie d'emblée à ${age >= 80 || isFrail ? 'TRÈS faible dose' : 'faible dose'} (SPC).`, { x: 50, y: currentY, size: 11, font: font });
+                currentY -= 15;
+                page.drawText(`-> Molécules : ARA 2 / IEC + Inhibiteur Calcique.`, { x: 50, y: currentY, size: 11, font: font });
+                currentY -= 15;
+                if(dipSys < 10) {
+                    page.drawText(`-> Chronothérapie : Prise vespérale justifiée (Profil Non-Dipper).`, { x: 50, y: currentY, size: 11, font: font });
+                    currentY -= 15;
+                }
+                if(padNuit < 60) {
+                    currentY -= 10;
+                    page.drawText(`VIGILANCE : La PAD nocturne est effondrée (${padNuit} mmHg). Risque de courbe en J.`, { x: 50, y: currentY, size: 11, font: fontBold, color: rgb(0.8, 0, 0) });
+                    currentY -= 15;
+                    page.drawText(`Titration prudente requise pour préserver la perfusion coronaire.`, { x: 50, y: currentY, size: 11, font: font, color: rgb(0.8, 0, 0) });
+                }
+            } else {
+                page.drawText(`-> Poursuite des règles hygiéno-diététiques.`, { x: 50, y: currentY, size: 11, font: font });
+            }
+
+            const sigBase64 = localStorage.getItem('cabinetSignature');
+            if (sigBase64) {
+                const sigBytes = await fetch(sigBase64).then(res => res.arrayBuffer());
+                let sigImage = sigBase64.includes('jpeg') || sigBase64.includes('jpg') ? await synthDoc.embedJpg(sigBytes) : await synthDoc.embedPng(sigBytes);
+                const sigDims = sigImage.scale(0.4);
+                page.drawImage(sigImage, { x: 350, y: 150, width: sigDims.width, height: sigDims.height });
+            } else {
+                page.drawText('Signature & Cachet :', { x: 400, y: 200, size: 11, font: font });
+            }
+
+            const [synthesePage] = await mergedPdf.copyPages(synthDoc, [0]);
+            mergedPdf.insertPage(0, synthesePage);
+
+            const pdfBytesFinal = await mergedPdf.save();
+            const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `MAPA_${nomPatient}_${prenomPatient}_DarAttabib.pdf`.replace(/\s+/g, '_');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
