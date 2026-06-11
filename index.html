@@ -8,10 +8,9 @@
     
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
     <script>
-        // SOLUTION TECHNIQUE : On désactive le recours au worker externe pour éviter le blocage CORS
-        // L'extraction se fera de manière autonome sur le fil principal.
+        // Désactivation du worker externe pour éviter tout conflit CORS sur GitHub Pages
         pdfjsLib.GlobalWorkerOptions.workerSrc = '';
     </script>
 </head>
@@ -139,6 +138,9 @@
     </div>
 
     <script>
+        // --- CONFIGURATION PDF.JS ---
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+
         // --- LOCAL STORAGE IMAGES ---
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -203,7 +205,7 @@
             manualSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
 
-        // --- MODE AUTOMATIQUE ASSAINI ---
+        // --- NOUVEL EXTRACTEUR ROBUSTE ---
         btnAuto.addEventListener('click', async () => {
             if (!document.getElementById('nomPatient').value || !document.getElementById('prenomPatient').value || !document.getElementById('age').value) {
                 alert("Veuillez d'abord remplir le nom, prénom et la date de naissance.");
@@ -213,52 +215,59 @@
             const file = pdfUpload.files[0];
             if (!file) return;
 
-            statusMsg.innerHTML = "<span class='text-blue-600 font-bold'>Analyse en cours (Fil principal)...</span>";
+            statusMsg.innerHTML = "<span class='text-blue-600 font-bold'>Extraction intelligente en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
-                
-                // Extraction autonome du PDF via pdfjsLib
                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                 const pdf = await loadingTask.promise;
                 let fullText = "";
 
-                // On scanne les deux premières pages
+                // Lecture globale des 2 premières pages
                 for (let i = 1; i <= Math.min(pdf.numPages, 2); i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
                     fullText += content.items.map(item => item.str).join(" ") + " ";
                 }
 
-                // Parser Regex DMS-ABP (<130, <135, <120)
-                const regex24 = /(\d{2,3})\s*\([\d.]+\)\s*\(<130\)\s*(\d{2,3})/;
-                const regexJour = /(\d{2,3})\s*\([\d.]+\)\s*\(<135\)\s*(\d{2,3})/;
-                const regexNuit = /(\d{2,3})\s*\([\d.]+\)\s*\(<120\)\s*(\d{2,3})/;
+                // Nettoyage des espaces multiples pour faciliter l'analyse
+                const textClean = fullText.replace(/\s+/g, ' ');
 
-                const match24 = fullText.match(regex24);
-                const matchJour = fullText.match(regexJour);
-                const matchNuit = fullText.match(regexNuit);
+                // Nouvelles Regex universelles ciblées sur les seuils d'objectifs DMS-ABP
+                const match24Sys = textClean.match(/(\d{2,3})\s*\([\d.]+\)\s*\(<130\)/);
+                const match24Dia = textClean.match(/(\d{2,3})\s*\([\d.]+\)\s*\(<80\)/);
+                
+                const matchJourSys = textClean.match(/(\d{2,3})\s*\([\d.]+\)\s*\(<135\)/);
+                const matchJourDia = textClean.match(/(\d{2,3})\s*\([\d.]+\)\s*\(<85\)/);
+                
+                const matchNuitSys = textClean.match(/(\d{2,3})\s*\([\d.]+\)\s*\(<120\)/);
+                const matchNuitDia = textClean.match(/(\d{2,3})\s*\([\d.]+\)\s*\(<70\)/);
 
-                if (match24 && matchJour && matchNuit) {
-                    document.getElementById('pas24').value = match24[1];
-                    document.getElementById('pad24').value = match24[2];
-                    document.getElementById('pasJour').value = matchJour[1];
-                    document.getElementById('padJour').value = matchJour[2];
-                    document.getElementById('pasNuit').value = matchNuit[1];
-                    document.getElementById('padNuit').value = matchNuit[2];
+                if (match24Sys && match24Dia && matchJourSys && matchJourDia && matchNuitSys && matchNuitDia) {
+                    
+                    document.getElementById('pas24').value = match24Sys[1];
+                    document.getElementById('pad24').value = match24Dia[1];
+                    document.getElementById('pasJour').value = matchJourSys[1];
+                    document.getElementById('padJour').value = matchJourDia[1];
+                    document.getElementById('pasNuit').value = matchNuitSys[1];
+                    document.getElementById('padNuit').value = matchNuitDia[1];
 
-                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Extraction réussie ! Compilation du PDF final...</span>";
+                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Extraction réussie ! Compilation du document final...</span>";
                     await generateAndMergePDF();
-                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Document généré avec succès !</span>";
+                    statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Compte-rendu généré avec succès !</span>";
+                    
+                    // Remplir visuellement le formulaire manuel pour montrer à l'utilisateur ce qui a été extrait
+                    manualSection.classList.remove('hidden');
+
                 } else {
-                    statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Données textuelles non trouvées. Veuillez utiliser le mode manuel guidé.</span>";
+                    statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Le format du PDF n'est pas standardisé. Basculement en saisie manuelle.</span>";
                     manualSection.classList.remove('hidden');
                     manualSection.scrollIntoView({ behavior: 'smooth' });
                 }
 
             } catch (err) {
-                console.error(err);
-                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Erreur d'analyse PDF. Utilisation du mode manuel requise.</span>";
+                console.error("Erreur PDF.js :", err);
+                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Le fichier n'a pas pu être lu. Veuillez saisir les moyennes manuellement.</span>";
                 manualSection.classList.remove('hidden');
             }
         });
