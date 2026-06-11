@@ -8,7 +8,7 @@
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-        // Option pour éviter les blocages de sécurité liés aux fichiers locaux (CORS)
+        // Neutralisation du Worker externe pour éviter les erreurs CORS en local
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
     <style>
@@ -154,7 +154,7 @@
                     </h2>
                     <div class="flex flex-col md:flex-row gap-4">
                         <button type="button" id="btnAuto" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-md flex justify-center items-center opacity-50 cursor-not-allowed" disabled>
-                            ⚡ Interprétation Automatique
+                            ⚡ Extraction des constantes
                         </button>
                         <button type="button" id="btnManual" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-md flex justify-center items-center">
                             ✍️ Vérification / Saisie Manuelle
@@ -214,7 +214,7 @@
         function verifyLicenseKey(keyString) {
             const cleanKey = keyString.replace(/\s+/g, '').toUpperCase();
             const parts = cleanKey.split('-');
-            if (parts.length !== 4 || parts[0] !== 'MAPA') return { valid: false, error: "Format invalide.", cleanKey };
+            if (parts.length !== 4 || parts[0] !== 'MAPA') return { valid: false, error: "Format invalide. Exemple: MAPA-2026-CAB-123A", cleanKey };
             
             const year = parseInt(parts[1], 10);
             const ident = parts[2];
@@ -415,7 +415,6 @@
         // ==========================================
         const dobInput = document.getElementById('dobPatient');
         dobInput.addEventListener('input', function() {
-            // Nettoyage et formatage automatique JJ/MM/AAAA
             let val = this.value.replace(/\D/g, ''); 
             if (val.length > 4) {
                 this.value = val.slice(0, 2) + '/' + val.slice(2, 4) + '/' + val.slice(4, 8);
@@ -425,7 +424,6 @@
                 this.value = val;
             }
 
-            // Calcul automatique de l'âge une fois la date complète saisie
             if (this.value.length === 10) {
                 const parts = this.value.split('/');
                 if (parts.length === 3) {
@@ -486,8 +484,6 @@
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
-                
-                // On passe un objet {data: ...} robuste sans faire appel à un worker externe
                 const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) });
                 const pdf = await loadingTask.promise;
                 let fullText = "";
@@ -499,8 +495,6 @@
                 }
 
                 let extractedData = { pas24: null, pad24: null, pasJour: null, padJour: null, pasNuit: null, padNuit: null };
-                
-                // Nettoyage extrême : suppression des guillemets et espaces parasites qui cassent le texte
                 const textCleanIdent = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
 
                 if (selectedDevice === 'dms') {
@@ -519,18 +513,19 @@
                     }
 
                 } else if (selectedDevice === 'abpm50') {
-                    // --- MOTEUR ABPM50 (Tolérance absolue) ---
+                    // --- MOTEUR ABPM50 ---
                     const extractEnclos = (text, startRegex, endRegex) => {
-                        const startIdx = text.search(startRegex);
-                        if(startIdx === -1) return "";
-                        const endIdx = text.search(endRegex);
-                        if(endIdx === -1) return text.substring(startIdx);
-                        return text.substring(startIdx, endIdx);
+                        const startMatch = text.match(startRegex);
+                        if (!startMatch) return "";
+                        const startIdx = startMatch.index;
+                        const endMatch = text.slice(startIdx + 1).match(endRegex);
+                        if (!endMatch) return text.substring(startIdx);
+                        return text.substring(startIdx, startIdx + 1 + endMatch.index);
                     };
 
-                    const enclos24 = extractEnclos(textCleanIdent, /\(\s*1\s*\)\s*24\s*heures/i, /\(\s*2\s*\)\s*Jour/i);
-                    const enclosJour = extractEnclos(textCleanIdent, /\(\s*2\s*\)\s*Jour/i, /\(\s*3\s*\)\s*Nuit/i);
-                    const enclosNuit = extractEnclos(textCleanIdent, /\(\s*3\s*\)\s*Nuit/i, /\(\s*4/i);
+                    const enclos24 = extractEnclos(textCleanIdent, /\(\s*1\s*\)/, /\(\s*2\s*\)/);
+                    const enclosJour = extractEnclos(textCleanIdent, /\(\s*2\s*\)/, /\(\s*3\s*\)/);
+                    const enclosNuit = extractEnclos(textCleanIdent, /\(\s*3\s*\)/, /\(\s*4\s*\)/);
 
                     const extractValidBP = (enclosStr) => {
                         if(!enclosStr) return null;
