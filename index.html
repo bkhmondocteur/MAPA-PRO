@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocPocket - Interprétation MAPA</title>
+    <title>DocPocket - Interprétation MAPA ESC 2024</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
@@ -12,14 +12,69 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
+    <style>
+        /* Masquer le contenu principal tant que non déverrouillé */
+        .locked-app { overflow: hidden; height: 100vh; }
+        .blur-sm { filter: blur(4px); }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans antialiased p-4 md:p-8">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased locked-app" id="bodyContainer">
 
-    <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200">
+    <div id="securityOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/95 backdrop-blur-md transition-opacity duration-300">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md mx-4 text-center">
+            
+            <div class="mb-6 flex justify-center">
+                <div class="bg-blue-100 text-blue-600 p-4 rounded-full">
+                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">DocPocket MAPA</h2>
+            <p id="secSubtitle" class="text-slate-500 mb-6">Authentification requise</p>
+
+            <div id="licenceScreen" class="hidden space-y-4">
+                <p class="text-sm text-slate-600 mb-4">Veuillez entrer votre clé de licence logicielle pour le premier lancement.</p>
+                <input type="text" id="licenceInput" placeholder="EX: DOCPOCKET-2026" class="w-full border border-slate-300 rounded-lg p-3 text-center font-mono uppercase focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                <button id="btnLicence" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Valider la licence</button>
+                <p id="licenceError" class="text-red-500 text-sm hidden font-medium"></p>
+            </div>
+
+            <div id="pinSetupScreen" class="hidden space-y-4">
+                <p class="text-sm text-slate-600 mb-4">Créez un code PIN à 4 chiffres pour protéger l'accès médical.</p>
+                <input type="password" id="pinSetupInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500" autocomplete="off" inputmode="numeric">
+                <button id="btnPinSetup" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Enregistrer le PIN</button>
+            </div>
+
+            <div id="unlockScreen" class="hidden space-y-4">
+                <p class="text-sm text-slate-600 mb-4">Entrez votre code PIN pour accéder à la session.</p>
+                <input type="password" id="pinUnlockInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500" autocomplete="off" inputmode="numeric">
+                <div class="flex gap-2">
+                    <button id="btnUnlock" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition">Déverrouiller</button>
+                    <button id="btnBio" class="bg-slate-200 hover:bg-slate-300 text-slate-700 p-3 rounded-lg transition hidden" title="Utiliser la biométrie">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A13.916 13.916 0 008 11a4 4 0 118 0c0 1.017-.07 2.019-.203 3m-2.118 6.844A21.88 21.88 0 0015.171 17m3.839 1.132c.645-2.266.99-4.659.99-7.132A8 8 0 008 4.07M3 15.364c.64-1.319 1-2.8 1-4.364 0-1.457.39-2.823 1.07-4"></path></svg>
+                    </button>
+                </div>
+                <p id="unlockError" class="text-red-500 text-sm hidden font-medium">Code PIN incorrect.</p>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="mainApp" class="blur-sm transition-all duration-300 max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200 my-4 md:my-8 pointer-events-none">
         
-        <div class="bg-slate-800 p-6 text-white text-center">
-            <h1 class="text-2xl font-bold tracking-wide">Module MAPA - ESC 2024</h1>
-            <p class="text-slate-300 text-sm mt-1">Complexe médical Dar Attabib</p>
+        <div class="bg-slate-800 p-6 flex flex-col md:flex-row justify-between items-center text-white">
+            <div class="text-center md:text-left mb-4 md:mb-0">
+                <h1 class="text-2xl font-bold tracking-wide">Module MAPA - ESC 2024</h1>
+                <p class="text-slate-300 text-sm mt-1">Complexe médical Dar Attabib</p>
+            </div>
+            <div class="flex space-x-3">
+                <button type="button" id="btnRefresh" class="flex items-center bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-lg text-sm font-medium transition shadow">
+                    🔄 Actualiser
+                </button>
+                <button type="button" id="btnLock" class="flex items-center bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-medium transition shadow">
+                    🔒 Verrouiller
+                </button>
+            </div>
         </div>
 
         <div class="p-6 md:p-8">
@@ -51,7 +106,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div class="lg:col-span-2">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Nom & Prénom</label>
-                            <input type="text" id="nomPatient" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500" autocomplete="off">
+                            <input type="text" id="nomPatient" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 validate-target" autocomplete="off">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Date de naissance</label>
@@ -59,7 +114,7 @@
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Âge</label>
-                            <input type="number" id="age" class="w-full border border-slate-300 bg-white rounded-lg p-2 text-slate-700 font-bold focus:ring-2 focus:ring-blue-500">
+                            <input type="number" id="age" class="w-full border border-slate-300 bg-white rounded-lg p-2 text-slate-700 font-bold focus:ring-2 focus:ring-blue-500 validate-target">
                         </div>
                         <div class="lg:col-span-4 flex justify-between items-center mt-2">
                             <div class="flex-1 mr-4">
@@ -83,7 +138,7 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700 mb-1">Modèle de l'appareil MAPA</label>
                             <select id="deviceModel" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 bg-white font-medium text-slate-700">
-                                <option value="dms">DMS-ABP (Format standard)</option>
+                                <option value="dms">DMS-ABP (Format avec cibles < 130)</option>
                                 <option value="abpm50">ABPM50 (Format blocs numérotés)</option>
                             </select>
                         </div>
@@ -104,7 +159,7 @@
                             ⚡ Interprétation Automatique
                         </button>
                         <button type="button" id="btnManual" class="flex-1 bg-slate-600 hover:bg-slate-700 text-white font-bold py-4 px-4 rounded-xl transition shadow-md flex justify-center items-center">
-                            ✍️ Saisie Manuelle / Vérification
+                            ✍️ Vérification / Saisie Manuelle
                         </button>
                     </div>
                     <p id="statusMsg" class="text-center text-sm mt-3 text-slate-500 font-medium"></p>
@@ -116,26 +171,26 @@
                         <div class="bg-white p-4 rounded-lg border shadow-sm">
                             <h4 class="text-sm font-semibold text-slate-700 mb-3 text-center">Période 24H (< 130/80)</h4>
                             <div class="flex space-x-2">
-                                <div><label class="block text-xs text-slate-500">PAS</label><input type="number" id="pas24" class="w-full border rounded p-2 text-center font-bold text-slate-700 bp-input"></div>
-                                <div><label class="block text-xs text-slate-500">PAD</label><input type="number" id="pad24" class="w-full border rounded p-2 text-center font-bold text-slate-700 bp-input"></div>
+                                <div><label class="block text-xs text-slate-500">PAS</label><input type="number" id="pas24" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
+                                <div><label class="block text-xs text-slate-500">PAD</label><input type="number" id="pad24" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                             </div>
                         </div>
                         <div class="bg-yellow-50 p-4 rounded-lg border border-yellow-100 shadow-sm">
                             <h4 class="text-sm font-semibold text-yellow-700 mb-3 text-center">Diurne (< 135/85)</h4>
                             <div class="flex space-x-2">
-                                <div><label class="block text-xs text-yellow-600">PAS</label><input type="number" id="pasJour" class="w-full border rounded p-2 text-center font-bold text-slate-700 bp-input"></div>
-                                <div><label class="block text-xs text-yellow-600">PAD</label><input type="number" id="padJour" class="w-full border rounded p-2 text-center font-bold text-slate-700 bp-input"></div>
+                                <div><label class="block text-xs text-yellow-600">PAS</label><input type="number" id="pasJour" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
+                                <div><label class="block text-xs text-yellow-600">PAD</label><input type="number" id="padJour" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                             </div>
                         </div>
                         <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-100 shadow-sm">
                             <h4 class="text-sm font-semibold text-indigo-700 mb-3 text-center">Nocturne (< 120/70)</h4>
                             <div class="flex space-x-2">
-                                <div><label class="block text-xs text-indigo-600">PAS</label><input type="number" id="pasNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700 bp-input"></div>
-                                <div><label class="block text-xs text-indigo-600">PAD</label><input type="number" id="padNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700 bp-input"></div>
+                                <div><label class="block text-xs text-indigo-600">PAS</label><input type="number" id="pasNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
+                                <div><label class="block text-xs text-indigo-600">PAD</label><input type="number" id="padNuit" class="w-full border rounded p-2 text-center font-bold text-slate-700 validate-target"></div>
                             </div>
                         </div>
                     </div>
-                    <button type="button" id="generateManualBtn" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition shadow">
+                    <button type="button" id="generateFinalBtn" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition shadow">
                         Générer et Fusionner le compte-rendu final
                     </button>
                 </div>
@@ -145,7 +200,148 @@
     </div>
 
     <script>
-        // --- CHRONOLOGIE IMAGE LOCAL STORAGE ---
+        // ==========================================
+        // GESTION DE LA SÉCURITÉ (Licence, PIN, Biométrie)
+        // ==========================================
+        const VALID_LICENSE = "DOCPOCKET-2026";
+        
+        const securityOverlay = document.getElementById('securityOverlay');
+        const mainApp = document.getElementById('mainApp');
+        const bodyContainer = document.getElementById('bodyContainer');
+        
+        const licenceScreen = document.getElementById('licenceScreen');
+        const pinSetupScreen = document.getElementById('pinSetupScreen');
+        const unlockScreen = document.getElementById('unlockScreen');
+
+        function unlockApp() {
+            sessionStorage.setItem('mapaUnlocked', 'true');
+            securityOverlay.classList.add('opacity-0', 'pointer-events-none');
+            setTimeout(() => securityOverlay.classList.add('hidden'), 300);
+            
+            mainApp.classList.remove('blur-sm', 'pointer-events-none');
+            bodyContainer.classList.remove('locked-app');
+        }
+
+        function lockApp() {
+            sessionStorage.removeItem('mapaUnlocked');
+            securityOverlay.classList.remove('hidden');
+            // Force reflow
+            void securityOverlay.offsetWidth;
+            securityOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            
+            mainApp.classList.add('blur-sm', 'pointer-events-none');
+            bodyContainer.classList.add('locked-app');
+            
+            checkSecurityState();
+        }
+
+        // Simule l'appel WebAuthn pour le client statique
+        async function triggerBiometrics() {
+            if (window.PublicKeyCredential) {
+                try {
+                    // Création d'un challenge dummy pour simuler l'appel capteur
+                    const publicKeyCredentialRequestOptions = {
+                        challenge: new Uint8Array(32),
+                        timeout: 60000,
+                        userVerification: "required"
+                    };
+                    await navigator.credentials.get({ publicKey: publicKeyCredentialRequestOptions });
+                    return true;
+                } catch (err) {
+                    console.log("Biométrie ignorée ou non configurée :", err);
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        function checkSecurityState() {
+            licenceScreen.classList.add('hidden');
+            pinSetupScreen.classList.add('hidden');
+            unlockScreen.classList.add('hidden');
+
+            if (sessionStorage.getItem('mapaUnlocked') === 'true') {
+                unlockApp();
+                return;
+            }
+
+            if (!localStorage.getItem('mapaLicense')) {
+                licenceScreen.classList.remove('hidden');
+            } else if (!localStorage.getItem('mapaPin')) {
+                pinSetupScreen.classList.remove('hidden');
+            } else {
+                unlockScreen.classList.remove('hidden');
+                document.getElementById('pinUnlockInput').value = "";
+                document.getElementById('pinUnlockInput').focus();
+                
+                // Active l'option biométrique si le navigateur la supporte
+                if (window.PublicKeyCredential) {
+                    document.getElementById('btnBio').classList.remove('hidden');
+                }
+            }
+        }
+
+        // Events Sécurité
+        document.getElementById('btnLicence').addEventListener('click', () => {
+            const val = document.getElementById('licenceInput').value.trim().toUpperCase();
+            if (val === VALID_LICENSE) {
+                localStorage.setItem('mapaLicense', 'true');
+                checkSecurityState();
+            } else {
+                document.getElementById('licenceError').classList.remove('hidden');
+                document.getElementById('licenceError').innerText = "Licence invalide.";
+            }
+        });
+
+        document.getElementById('btnPinSetup').addEventListener('click', () => {
+            const pin = document.getElementById('pinSetupInput').value.trim();
+            if (pin.length === 4 && /^\d+$/.test(pin)) {
+                localStorage.setItem('mapaPin', pin);
+                checkSecurityState();
+            } else {
+                alert("Le PIN doit contenir 4 chiffres.");
+            }
+        });
+
+        document.getElementById('btnUnlock').addEventListener('click', () => {
+            const pin = document.getElementById('pinUnlockInput').value.trim();
+            if (pin === localStorage.getItem('mapaPin')) {
+                document.getElementById('unlockError').classList.add('hidden');
+                unlockApp();
+            } else {
+                document.getElementById('unlockError').classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('btnBio').addEventListener('click', async () => {
+            const success = await triggerBiometrics();
+            if(success) unlockApp();
+        });
+
+        // ==========================================
+        // GESTION UI : Actualiser & Verrouiller
+        // ==========================================
+        document.getElementById('btnLock').addEventListener('click', lockApp);
+        
+        document.getElementById('btnRefresh').addEventListener('click', () => {
+            document.getElementById('mapaForm').reset();
+            document.getElementById('manualSection').classList.add('hidden');
+            document.getElementById('statusMsg').innerHTML = "";
+            btnAuto.disabled = true;
+            btnAuto.classList.add('opacity-50', 'cursor-not-allowed');
+            // Retrait des bordures rouges d'erreur
+            document.querySelectorAll('.validate-target').forEach(el => {
+                el.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+            });
+        });
+
+        // Initialize App Security
+        checkSecurityState();
+
+
+        // ==========================================
+        // CONFIGURATIONS ET OUTILS GÉNÉRAUX
+        // ==========================================
         const fileToBase64 = (file) => new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(file);
@@ -167,25 +363,22 @@
             }
         });
 
-        window.onload = () => {
+        window.addEventListener('DOMContentLoaded', () => {
             if (localStorage.getItem('cabinetLogo')) document.getElementById('logoStatus').classList.remove('hidden');
             if (localStorage.getItem('cabinetSignature')) document.getElementById('sigStatus').classList.remove('hidden');
-        };
+        });
 
-        // --- DYNAMIQUE DE L'ÂGE ---
         document.getElementById('dobPatient').addEventListener('change', function() {
             if(!this.value) return;
             const dob = new Date(this.value);
             const today = new Date();
             let calculatedAge = today.getFullYear() - dob.getFullYear();
             const m = today.getMonth() - dob.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-                calculatedAge--;
-            }
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) calculatedAge--;
             document.getElementById('age').value = calculatedAge;
+            document.getElementById('age').classList.remove('border-red-500', 'ring-1', 'ring-red-500');
         });
 
-        // --- LOCK / UNLOCK AUTO MODE ---
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
         const btnManual = document.getElementById('btnManual');
@@ -196,7 +389,7 @@
             if (pdfUpload.files[0]) {
                 btnAuto.disabled = false;
                 btnAuto.classList.remove('opacity-50', 'cursor-not-allowed');
-                statusMsg.innerHTML = "Rapport chargé avec succès. Prêt pour l'analyse.";
+                statusMsg.innerHTML = "Rapport chargé. Prêt pour l'analyse.";
             } else {
                 btnAuto.disabled = true;
                 btnAuto.classList.add('opacity-50', 'cursor-not-allowed');
@@ -209,7 +402,16 @@
             manualSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
 
-        // --- DOUBLE MOTEUR D'EXTRACTION TEXTUELLE ---
+        // Nettoyage visuel rouge sur saisie
+        document.querySelectorAll('.validate-target').forEach(input => {
+            input.addEventListener('input', function() {
+                this.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+            });
+        });
+
+        // ==========================================
+        // MOTEUR D'EXTRACTION DOUBLE (DMS-ABP & ABPM50)
+        // ==========================================
         btnAuto.addEventListener('click', async () => {
             const file = pdfUpload.files[0];
             if (!file) return;
@@ -227,14 +429,13 @@
                 for (let i = 1; i <= Math.min(pdf.numPages, 2); i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
-                    // Ajout d'un espace pour éviter les fusions de mots lors des retours à la ligne
                     fullText += content.items.map(item => item.str).join(" ") + " ";
                 }
 
                 let extractedData = { pas24: null, pad24: null, pasJour: null, padJour: null, pasNuit: null, padNuit: null, nom: "", age: "" };
 
                 if (selectedDevice === 'dms') {
-                    // --- MOTEUR DMS-ABP ---
+                    // --- STRATÉGIE PARSER DMS-ABP ---
                     const textClean = fullText.replace(/\s+/g, ' ');
                     const match24Sys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*130\s*\)/);
                     const match24Dia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*80\s*\)/);
@@ -255,57 +456,44 @@
                     if (ageMatch) extractedData.age = ageMatch[1];
 
                 } else if (selectedDevice === 'abpm50') {
-                    // --- MOTEUR ABPM50 (Technique des Enclos Sécurisés) ---
+                    // --- STRATÉGIE PARSER ABPM50 (Technique des Enclos Sécurisés) ---
                     
-                    // 1. Découpage chirurgical par blocs (Enclos)
-                    const extractEnclos = (text, startMarker, endMarker) => {
-                        const regex = new RegExp(`${startMarker}([\\s\\S]*?)${endMarker}`, 'i');
-                        const match = text.match(regex);
-                        return match ? match[1] : "";
-                    };
-
-                    const text24 = extractEnclos(fullText, "\\(1\\)\\s*24 heures", "\\(2\\)\\s*Jour");
-                    const textJour = extractEnclos(fullText, "\\(2\\)\\s*Jour", "\\(3\\)\\s*Nuit");
-                    const textNuit = extractEnclos(fullText, "\\(3\\)\\s*Nuit", "\\(4\\)");
-
-                    // 2. Extracteur filtrant les normes imprimées
-                    const getValidBP = (enclosText) => {
-                        if(!enclosText) return null;
-                        const bps = [...enclosText.matchAll(/(\d{2,3})\s*\/\s*(\d{2,3})/g)];
-                        for (let m of bps) {
-                            const sys = parseInt(m[1]); const dia = parseInt(m[2]);
-                            // Destruction des seuils ESC parasites
-                            if ((sys === 130 && dia === 80) || (sys === 135 && dia === 85) || (sys === 120 && dia === 70)) continue;
-                            if (sys < 70 || sys > 250 || dia < 30 || dia > 150) continue;
-                            return { sys, dia };
-                        }
-                        return null;
-                    };
-
-                    const bp24 = getValidBP(text24);
-                    const bpJour = getValidBP(textJour);
-                    const bpNuit = getValidBP(textNuit);
-
-                    if (bp24 && bpJour && bpNuit) {
-                        extractedData.pas24 = bp24.sys; extractedData.pad24 = bp24.dia;
-                        extractedData.pasJour = bpJour.sys; extractedData.padJour = bpJour.dia;
-                        extractedData.pasNuit = bpNuit.sys; extractedData.padNuit = bpNuit.dia;
-                    }
-
-                    // 3. Extraction de l'identité anti-fragmentation
+                    // Nettoyage de l'identité anti-fragmentation
                     const textCleanIdent = fullText.replace(/\s+/g, ' ');
                     const nomMatch = textCleanIdent.match(/Nom\s*:([\s\S]*?)(?:Homme|Femme|Female|Male|Age|\$|Kobe|N°)/i);
-                    if (nomMatch) extractedData.nom = nomMatch[1].trim().replace(/\//g, '');
+                    if (nomMatch) extractedData.nom = nomMatch[1].trim().replace(/\//g, '').replace(/Homme/i, '').replace(/Femme/i, '');
                     
                     const ageMatch = textCleanIdent.match(/Age\s*:(?:.*?Female|.*?Male|.*?Homme|.*?Femme)?\s*(\d{2})/i);
                     if (ageMatch) extractedData.age = ageMatch[1];
+
+                    // Extraction chirurgicale des moyennes via l'enclos "BP Moy"
+                    const block24 = textCleanIdent.match(/24\s*heures[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
+                    const blockJour = textCleanIdent.match(/Jour[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
+                    const blockNuit = textCleanIdent.match(/Nuit[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
+
+                    // Routine d'exclusion si la moyenne détectée est le seuil imprimé
+                    const checkNorm = (sys, dia) => {
+                        const s = parseInt(sys); const d = parseInt(dia);
+                        if ((s===130 && d===80) || (s===135 && d===85) || (s===120 && d===70)) return false;
+                        return true;
+                    };
+
+                    if (block24 && checkNorm(block24[1], block24[2])) {
+                        extractedData.pas24 = block24[1]; extractedData.pad24 = block24[2];
+                    }
+                    if (blockJour && checkNorm(blockJour[1], blockJour[2])) {
+                        extractedData.pasJour = blockJour[1]; extractedData.padJour = blockJour[2];
+                    }
+                    if (blockNuit && checkNorm(blockNuit[1], blockNuit[2])) {
+                        extractedData.pasNuit = blockNuit[1]; extractedData.padNuit = blockNuit[2];
+                    }
                 }
 
-                // Distribution et injection UI
+                // Distribution UI
                 if (extractedData.nom) document.getElementById('nomPatient').value = extractedData.nom;
                 if (extractedData.age) document.getElementById('age').value = extractedData.age;
 
-                if (extractedData.pas24) {
+                if (extractedData.pas24 && extractedData.pasJour && extractedData.pasNuit) {
                     document.getElementById('pas24').value = extractedData.pas24;
                     document.getElementById('pad24').value = extractedData.pad24;
                     document.getElementById('pasJour').value = extractedData.pasJour;
@@ -321,19 +509,20 @@
                     statusMsg.innerHTML = "<span class='text-green-600 font-bold'>Document traité et téléchargé avec succès !</span>";
                     manualSection.classList.remove('hidden'); 
                 } else {
-                    statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Structure textuelle complexe. Vérification manuelle requise.</span>";
+                    statusMsg.innerHTML = "<span class='text-amber-600 font-bold'>Ambiguïté textuelle ou norme exacte. Vérification manuelle requise.</span>";
                     manualSection.classList.remove('hidden');
                     manualSection.scrollIntoView({ behavior: 'smooth' });
+                    validateInputs(); // Met en rouge les cases vides
                 }
 
             } catch (err) {
                 console.error(err);
-                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Échec de l'accès au fichier. Utilisation du mode manuel.</span>";
+                statusMsg.innerHTML = "<span class='text-red-500 font-bold'>Échec de lecture. Utilisation du mode manuel.</span>";
                 manualSection.classList.remove('hidden');
             }
         });
 
-        // --- SÉCURITÉ : VALIDATION DES CHAMPS AVANT CALCUL ---
+        // --- VALIDATION GLOBALE AVANT GÉNÉRATION ---
         function validateInputs() {
             const requiredIds = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit'];
             let isValid = true;
@@ -356,22 +545,15 @@
             return isValid;
         }
 
-        // Efface le rouge dès qu'on tape dans une case
-        document.querySelectorAll('input').forEach(input => {
-            input.addEventListener('input', function() {
-                this.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
-            });
-        });
-
-        // --- DÉCLENCHEMENT MANUEL SÉCURISÉ ---
-        document.getElementById('generateManualBtn').addEventListener('click', async () => {
+        // --- DÉCLENCHEMENT MANUEL ---
+        document.getElementById('generateFinalBtn').addEventListener('click', async () => {
             if (!validateInputs()) return;
             document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Génération du compte-rendu...</span>";
             await generateAndMergePDF();
-            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>Rapport manuel généré et fusionné !</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>Rapport généré et fusionné avec succès !</span>";
         });
 
-        // --- ARCHITECTURE DE COMPILATION ET FUSION PDF ---
+        // --- GÉNÉRATION ET FUSION PDF ---
         async function generateAndMergePDF() {
             const fullName = document.getElementById('nomPatient').value.trim().toUpperCase();
             const age = parseInt(document.getElementById('age').value);
