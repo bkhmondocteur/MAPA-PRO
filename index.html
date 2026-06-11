@@ -211,7 +211,6 @@
         const unlockScreen = document.getElementById('unlockScreen');
 
         function verifyLicenseKey(keyString) {
-            // Destruction radicale des espaces invisibles du copier/coller
             const cleanKey = keyString.replace(/\s+/g, '').toUpperCase();
             
             const parts = cleanKey.split('-');
@@ -313,7 +312,6 @@
             }
         }
 
-        // Actions UI Sécurité
         const handleLicenceSubmit = () => {
             const inputVal = document.getElementById('licenceInput').value;
             const verification = verifyLicenseKey(inputVal);
@@ -324,7 +322,6 @@
                 errBox.classList.add('text-green-600');
                 errBox.innerText = "✅ Licence validée avec succès !";
                 
-                // Transition visuelle pour éviter la confusion
                 setTimeout(() => {
                     errBox.classList.add('hidden');
                     errBox.classList.remove('text-green-600');
@@ -358,12 +355,10 @@
             }
         };
 
-        // Click Events
         document.getElementById('btnLicence').addEventListener('click', handleLicenceSubmit);
         document.getElementById('btnPinSetup').addEventListener('click', handlePinSetupSubmit);
         document.getElementById('btnUnlock').addEventListener('click', handleUnlockSubmit);
         
-        // Enter Key Events
         document.getElementById('licenceInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLicenceSubmit(); });
         document.getElementById('pinSetupInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') handlePinSetupSubmit(); });
         document.getElementById('pinUnlockInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') handleUnlockSubmit(); });
@@ -507,33 +502,51 @@
                     if (ageMatch) extractedData.age = ageMatch[1];
 
                 } else if (selectedDevice === 'abpm50') {
-                    // --- MOTEUR ABPM50 (Enclos Sécurisés) ---
+                    // --- MOTEUR ABPM50 (Technique des Enclos Pures avec Filtrage Brut) ---
                     const textCleanIdent = fullText.replace(/\s+/g, ' ');
+                    
+                    // Identité
                     const nomMatch = textCleanIdent.match(/Nom\s*:([\s\S]*?)(?:Homme|Femme|Female|Male|Age|\$|Kobe|N°)/i);
                     if (nomMatch) extractedData.nom = nomMatch[1].trim().replace(/\//g, '').replace(/Homme/i, '').replace(/Femme/i, '');
                     
                     const ageMatch = textCleanIdent.match(/Age\s*:(?:.*?Female|.*?Male|.*?Homme|.*?Femme)?\s*(\d{2})/i);
                     if (ageMatch) extractedData.age = ageMatch[1];
 
-                    const block24 = textCleanIdent.match(/24\s*heures[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
-                    const blockJour = textCleanIdent.match(/Jour[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
-                    const blockNuit = textCleanIdent.match(/Nuit[\s\S]*?BP\s*Moy\(mmHg\)\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
-
-                    const checkNorm = (sys, dia) => {
-                        const s = parseInt(sys); const d = parseInt(dia);
-                        if ((s===130 && d===80) || (s===135 && d===85) || (s===120 && d===70)) return false;
-                        return true;
+                    // Fonction d'isolement par blocs (ignorant le désordre intérieur)
+                    const extractEnclos = (text, startRegex, endRegex) => {
+                        const startIdx = text.search(startRegex);
+                        if(startIdx === -1) return "";
+                        const endIdx = text.search(endRegex);
+                        if(endIdx === -1) return text.substring(startIdx);
+                        return text.substring(startIdx, endIdx);
                     };
 
-                    if (block24 && checkNorm(block24[1], block24[2])) {
-                        extractedData.pas24 = block24[1]; extractedData.pad24 = block24[2];
-                    }
-                    if (blockJour && checkNorm(blockJour[1], blockJour[2])) {
-                        extractedData.pasJour = blockJour[1]; extractedData.padJour = blockJour[2];
-                    }
-                    if (blockNuit && checkNorm(blockNuit[1], blockNuit[2])) {
-                        extractedData.pasNuit = blockNuit[1]; extractedData.padNuit = blockNuit[2];
-                    }
+                    const enclos24 = extractEnclos(textCleanIdent, /\(1\)\s*24 heures/i, /\(2\)\s*Jour/i);
+                    const enclosJour = extractEnclos(textCleanIdent, /\(2\)\s*Jour/i, /\(3\)\s*Nuit/i);
+                    const enclosNuit = extractEnclos(textCleanIdent, /\(3\)\s*Nuit/i, /\(4\)/i);
+
+                    // Fonction de filtrage mathématique des valeurs
+                    const extractValidBP = (enclosStr) => {
+                        if(!enclosStr) return null;
+                        const matches = [...enclosStr.matchAll(/(\d{2,3})\s*\/\s*(\d{2,3})/g)];
+                        for(let m of matches) {
+                            const s = parseInt(m[1]); const d = parseInt(m[2]);
+                            // Destruction absolue des seuils fixes
+                            if ((s===130 && d===80) || (s===135 && d===85) || (s===120 && d===70)) continue; 
+                            // Destruction des valeurs physiquement impossibles (dates, etc)
+                            if (s < 70 || s > 250 || d < 30 || d > 150) continue; 
+                            return {sys: s, dia: d};
+                        }
+                        return null;
+                    };
+
+                    const bp24 = extractValidBP(enclos24);
+                    const bpJour = extractValidBP(enclosJour);
+                    const bpNuit = extractValidBP(enclosNuit);
+
+                    if (bp24) { extractedData.pas24 = bp24.sys; extractedData.pad24 = bp24.dia; }
+                    if (bpJour) { extractedData.pasJour = bpJour.sys; extractedData.padJour = bpJour.dia; }
+                    if (bpNuit) { extractedData.pasNuit = bpNuit.sys; extractedData.padNuit = bpNuit.dia; }
                 }
 
                 if (extractedData.nom) document.getElementById('nomPatient').value = extractedData.nom;
