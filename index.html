@@ -73,9 +73,9 @@
                 
                 <details class="border border-blue-100 bg-blue-50/30 p-4 rounded-lg shadow-sm">
                     <summary class="text-sm font-semibold text-blue-800 cursor-pointer flex items-center outline-none">
-                        ⚙️ Paramètres d'Identité Visuelle
+                        ⚙️ Paramètres (Identité Visuelle & IA)
                     </summary>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                         <div>
                             <label class="block text-xs font-medium text-slate-700 mb-1">Logo</label>
                             <input type="file" id="logoUpload" accept="image/png, image/jpeg" class="text-xs text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-700">
@@ -85,6 +85,13 @@
                             <label class="block text-xs font-medium text-slate-700 mb-1">Signature</label>
                             <input type="file" id="signatureUpload" accept="image/png, image/jpeg" class="text-xs text-slate-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:bg-blue-100 file:text-blue-700">
                             <p id="sigStatus" class="text-xs text-green-600 mt-1 hidden">✓ Mémorisé</p>
+                        </div>
+                        <div class="flex flex-col justify-end">
+                            <label class="block text-xs font-medium text-slate-700 mb-1">Moteur d'Intelligence Artificielle</label>
+                            <button type="button" id="btnChangeApiKey" class="bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-bold py-2.5 px-4 rounded transition border border-purple-200 flex items-center justify-center gap-2">
+                                🔑 Modifier la clé API Gemini
+                            </button>
+                            <p id="apiStatus" class="text-xs text-green-600 mt-1 hidden">✓ Clé enregistrée</p>
                         </div>
                     </div>
                 </details>
@@ -368,6 +375,36 @@
             input.addEventListener('input', function() { this.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); });
         });
 // ==========================================
+        // GESTION DU BOUTON CLÉ API
+        // ==========================================
+        const btnChangeApiKey = document.getElementById('btnChangeApiKey');
+        const apiStatus = document.getElementById('apiStatus');
+
+        // Vérification au chargement
+        window.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('geminiApiKeyLocal')) {
+                apiStatus.classList.remove('hidden');
+            }
+        });
+
+        btnChangeApiKey.addEventListener('click', () => {
+            const currentKey = localStorage.getItem('geminiApiKeyLocal') || '';
+            const newKey = prompt("Veuillez coller votre nouvelle clé API Gemini :", currentKey);
+            
+            if (newKey !== null) { // Si l'utilisateur n'a pas cliqué sur Annuler
+                if (newKey.trim() !== "") {
+                    localStorage.setItem('geminiApiKeyLocal', newKey.trim());
+                    apiStatus.classList.remove('hidden');
+                    alert("✅ Nouvelle clé API enregistrée avec succès !");
+                } else {
+                    localStorage.removeItem('geminiApiKeyLocal');
+                    apiStatus.classList.add('hidden');
+                    alert("⚠️ Clé API supprimée. L'extraction automatique vous demandera une clé à la prochaine utilisation.");
+                }
+            }
+        });
+
+        // ==========================================
         // FLUX 1 : MODE MANUEL
         // ==========================================
         document.getElementById('btnManual').addEventListener('click', () => {
@@ -432,6 +469,7 @@
                     apiKey = prompt("Première utilisation : Veuillez coller votre clé API Gemini (commençant par AQ...). Elle sera sauvegardée localement dans ce navigateur.");
                     if (apiKey && apiKey.trim() !== "") {
                         localStorage.setItem('geminiApiKeyLocal', apiKey.trim());
+                        document.getElementById('apiStatus').classList.remove('hidden');
                     } else {
                         throw new Error("Clé API manquante. L'analyse IA ne peut pas démarrer.");
                     }
@@ -471,9 +509,10 @@
                 });
 
                 if (!response.ok) {
-                    // Si la clé est invalide, on la supprime pour permettre de la retaper à la prochaine tentative
+                    // Si la clé est invalide, on la supprime pour permettre de la retaper
                     if (response.status === 400 || response.status === 403) {
                         localStorage.removeItem('geminiApiKeyLocal');
+                        document.getElementById('apiStatus').classList.add('hidden');
                     }
                     throw new Error(`Erreur API (${response.status}). Vérifiez la clé.`);
                 }
