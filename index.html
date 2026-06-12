@@ -380,7 +380,6 @@
         const btnChangeApiKey = document.getElementById('btnChangeApiKey');
         const apiStatus = document.getElementById('apiStatus');
 
-        // Vérification au chargement
         window.addEventListener('DOMContentLoaded', () => {
             if(localStorage.getItem('geminiApiKeyLocal')) {
                 apiStatus.classList.remove('hidden');
@@ -391,7 +390,7 @@
             const currentKey = localStorage.getItem('geminiApiKeyLocal') || '';
             const newKey = prompt("Veuillez coller votre nouvelle clé API Gemini :", currentKey);
             
-            if (newKey !== null) { // Si l'utilisateur n'a pas cliqué sur Annuler
+            if (newKey !== null) {
                 if (newKey.trim() !== "") {
                     localStorage.setItem('geminiApiKeyLocal', newKey.trim());
                     apiStatus.classList.remove('hidden');
@@ -399,7 +398,7 @@
                 } else {
                     localStorage.removeItem('geminiApiKeyLocal');
                     apiStatus.classList.add('hidden');
-                    alert("⚠️ Clé API supprimée. L'extraction automatique vous demandera une clé à la prochaine utilisation.");
+                    alert("⚠️ Clé API supprimée.");
                 }
             }
         });
@@ -414,7 +413,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique Sécurisée)
+        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique Corrigée)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -453,7 +452,6 @@
                 const pdf = await loadingTask.promise;
                 let fullText = "";
 
-                // Extraction des 4 premières pages pour garantir la lecture des tableaux
                 for (let i = 1; i <= Math.min(pdf.numPages, 4); i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
@@ -462,7 +460,6 @@
 
                 const textClean = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
 
-                // Récupération de la clé API via localStorage
                 let apiKey = localStorage.getItem('geminiApiKeyLocal');
                 
                 if (!apiKey) {
@@ -476,40 +473,40 @@
                 }
                 
                 const promptClinique = `
-                    Tu es un cardiologue expert. Analyse ce texte brut extrait d'un rapport de MAPA (holter tensionnel).
+                    Tu es un cardiologue expert. Analyse ce texte brut extrait d'un rapport de MAPA.
                     Extrais les valeurs moyennes exactes demandées. 
                     Si le rapport indique un "Ratio Anormal" ou une "Charge (Load)" supérieure à 40%, défini loadHigh sur true.
                     Si le rapport indique des mesures valides inférieures à 70%, défini validExam sur false.
                     
-                    Réponds UNIQUEMENT avec un objet JSON strict et valide. Aucun texte autour. Format attendu :
+                    Tu dois impérativement répondre sous la forme d'un objet JSON strict encapsulé entre des balises de code markdown comme ceci :
+                    \`\`\`json
                     {
-                        "pas24": nombre (systolique 24h),
-                        "pad24": nombre (diastolique 24h),
-                        "pasJour": nombre (systolique diurne/jour),
-                        "padJour": nombre (diastolique diurne/jour),
-                        "pasNuit": nombre (systolique nocturne/nuit),
-                        "padNuit": nombre (diastolique nocturne/nuit),
-                        "fc": nombre (fréquence cardiaque moyenne),
+                        "pas24": nombre,
+                        "pad24": nombre,
+                        "pasJour": nombre,
+                        "padJour": nombre,
+                        "pasNuit": nombre,
+                        "padNuit": nombre,
+                        "fc": nombre,
                         "loadHigh": true/false,
                         "validExam": true/false
                     }
+                    \`\`\`
                     Texte à analyser : ${textClean}
                 `;
 
-                // Appel robuste vers l'API Google Cloud (version v1)
+                // Suppression de la configuration restrictive pour éliminer l'erreur 400 sur clé GCP
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: "POST",
                     headers: { 
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({ 
-                        contents: [{ parts: [{ text: promptClinique }] }],
-                        generationConfig: { responseMimeType: "application/json" }
+                        contents: [{ parts: [{ text: promptClinique }] }]
                     })
                 });
 
                 if (!response.ok) {
-                    // Si la clé est invalide, on la supprime pour permettre de la retaper
                     if (response.status === 400 || response.status === 403) {
                         localStorage.removeItem('geminiApiKeyLocal');
                         document.getElementById('apiStatus').classList.add('hidden');
@@ -518,8 +515,16 @@
                 }
 
                 const responseData = await response.json();
-                const jsonText = responseData.candidates[0].content.parts[0].text;
-                const extractedData = JSON.parse(jsonText);
+                let jsonText = responseData.candidates[0].content.parts[0].text;
+                
+                // Extraction propre du texte JSON renvoyé au format brut
+                if (jsonText.includes("```json")) {
+                    jsonText = jsonText.split("```json")[1].split("```")[0];
+                } else if (jsonText.includes("```")) {
+                    jsonText = jsonText.split("```")[1].split("```")[0];
+                }
+                
+                const extractedData = JSON.parse(jsonText.trim());
 
                 // Distribution des données
                 if(extractedData.pas24) document.getElementById('pas24').value = extractedData.pas24;
