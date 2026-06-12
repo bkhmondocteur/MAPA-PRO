@@ -139,7 +139,7 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-3 mb-6">
+                        <div class="grid grid-cols-3 gap-3 mb-4">
                             <div class="bg-white p-3 rounded-lg border shadow-sm text-center">
                                 <div class="text-xs font-semibold text-slate-500 mb-1">24H (<130/80)</div>
                                 <div class="flex justify-center items-center gap-1">
@@ -157,6 +157,22 @@
                                 <div class="flex justify-center items-center gap-1">
                                     <input type="number" id="pasNuit" class="w-12 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padNuit" class="w-12 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 mb-6">
+                            <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 shadow-sm">
+                                <label class="block text-xs font-semibold text-purple-700 mb-1">Dipping Systolique (%)</label>
+                                <input type="number" step="0.1" id="dipSys" class="w-full text-sm font-bold text-slate-700 bg-transparent outline-none border-b border-purple-300 focus:border-purple-500 p-0 rounded-sm">
+                            </div>
+                            <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 shadow-sm">
+                                <label class="block text-xs font-semibold text-purple-700 mb-1">Profil Dipping</label>
+                                <select id="profilDipping" class="w-full text-sm font-bold text-slate-700 bg-transparent outline-none border-b border-purple-300 focus:border-purple-500 p-0 rounded-sm">
+                                    <option value="Dipper (Physiologique)">Dipper (Physiologique)</option>
+                                    <option value="Non-Dipper (Absence de baisse)">Non-Dipper (Absence de baisse)</option>
+                                    <option value="Reverse Dipper (Inversion)">Reverse Dipper (Inversion)</option>
+                                    <option value="Extreme Dipper (Baisse majeure)">Extreme Dipper (Baisse majeure)</option>
+                                </select>
                             </div>
                         </div>
 
@@ -379,7 +395,7 @@
             }
         });
 
-        // Lier automatiquement l'âge à la fragilité (au fur et à mesure de la frappe)
+        // Lier l'âge à la fragilité
         document.getElementById('age').addEventListener('input', function() {
             const parsedAge = parseInt(this.value);
             if (!isNaN(parsedAge)) {
@@ -387,12 +403,48 @@
             }
         });
 
+        // MISE À JOUR DYNAMIQUE DU DIPPING EN CAS DE SAISIE MANUELLE
+        function updateDippingUI() {
+            const pj = parseFloat(document.getElementById('pasJour').value);
+            const pn = parseFloat(document.getElementById('pasNuit').value);
+            
+            if (pj > 0 && !isNaN(pn)) {
+                const dip = (((pj - pn) / pj) * 100).toFixed(1);
+                document.getElementById('dipSys').value = dip;
+                
+                const profEl = document.getElementById('profilDipping');
+                if (dip < 0) profEl.value = "Reverse Dipper (Inversion)";
+                else if (dip <= 10) profEl.value = "Non-Dipper (Absence de baisse)";
+                else if (dip <= 20) profEl.value = "Dipper (Physiologique)";
+                else profEl.value = "Extreme Dipper (Baisse majeure)";
+            }
+        }
+        
+        ['pasJour', 'pasNuit'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateDippingUI);
+        });
+
         // Enlever les erreurs rouges lors de la frappe
-        ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit'].forEach(id => {
+        ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys'].forEach(id => {
             document.getElementById(id).addEventListener('input', function() {
                 this.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
             });
         });
+
+        function validateAllInputs() {
+            const requiredIds = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys'];
+            let isValid = true;
+            requiredIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value || el.value.toString().trim() === '') { 
+                    el.classList.add('border-red-500', 'ring-1', 'ring-red-500'); 
+                    isValid = false; 
+                } else {
+                    el.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+                }
+            });
+            return isValid;
+        }
 
         // ==========================================
         // FLUX 1 : MODE MANUEL
@@ -404,7 +456,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : IA (Extraction Sémantique Corrigée)
+        // FLUX 2 : IA (Extraction Globale)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -420,7 +472,7 @@
             const file = pdfUpload.files[0];
             if (!file) return;
             
-            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Extraction de l'identité et analyse sémantique par l'IA en cours...</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Extraction de l'identité et analyse sémantique globale par l'IA en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -428,7 +480,6 @@
                 const pdf = await loadingTask.promise;
                 let fullText = "";
 
-                // Lecture jusqu'à 4 pages pour attraper tous les tableaux
                 for (let i = 1; i <= Math.min(pdf.numPages, 4); i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
@@ -450,21 +501,29 @@
                 
                 const promptClinique = `
                     Analyse ce rapport de MAPA (Holter Tensionnel). 
-                    Extrais impérativement le nom complet du patient, son âge, les moyennes de pression artérielle (PAS/PAD) sur 24h, Jour, et Nuit, la fréquence cardiaque (FC).
+                    Extrais impérativement le nom complet du patient, son âge, les moyennes PAS/PAD sur 24h, Jour, et Nuit, la fréquence cardiaque (FC).
+                    
+                    Extrais également le dipping systolique (en %). S'il n'est pas explicitement écrit, calcule-le : ((pasJour - pasNuit) / pasJour) * 100.
+                    Déduis le profil exact selon le dipping systolique :
+                    - "Reverse Dipper (Inversion)" si < 0%
+                    - "Non-Dipper (Absence de baisse)" si entre 0% et 10%
+                    - "Dipper (Physiologique)" si entre 10.1% et 20%
+                    - "Extreme Dipper (Baisse majeure)" si > 20%
+
                     Si la charge (Load ou Ratio Anormal) > 40%, loadHigh = true.
                     Si mesures valides < 70%, validExam = false.
                     
-                    Tu dois répondre UNIQUEMENT par un objet JSON valide, sans balises markdown, sans commentaires, selon ce format exact :
+                    Tu dois répondre UNIQUEMENT par un objet JSON valide, selon ce format exact :
                     {
-                        "nomPatient": "Nom complet",
-                        "age": 0,
+                        "nomPatient": "Nom complet", "age": 0,
                         "pas24": 0, "pad24": 0, "pasJour": 0, "padJour": 0, "pasNuit": 0, "padNuit": 0, "fc": 0,
+                        "dippingSys": 0.0,
+                        "profilDipping": "Dipper (Physiologique)",
                         "loadHigh": false, "validExam": true
                     }
                     Texte brut à analyser : ${textClean}
                 `;
 
-                // Utilisation de l'URL v1beta officielle
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -482,63 +541,55 @@
                 const responseData = await response.json();
                 let jsonText = responseData.candidates[0].content.parts[0].text;
                 
-                // Extracteur Laser : Isole le JSON même si l'IA rajoute des phrases de politesse
                 const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
                 if (!jsonMatch) throw new Error("Format de réponse de l'IA incompréhensible.");
                 
                 const extractedData = JSON.parse(jsonMatch[0]);
 
-                // Distribution vers l'interface
                 if(extractedData.nomPatient) document.getElementById('nomPatient').value = extractedData.nomPatient;
+                
                 if(extractedData.age) {
-                    document.getElementById('age').value = extractedData.age;
-                    document.getElementById('isFrail').checked = (extractedData.age >= 80);
+                    const parsedAge = parseInt(extractedData.age);
+                    if(!isNaN(parsedAge)) {
+                        document.getElementById('age').value = parsedAge;
+                        document.getElementById('isFrail').checked = (parsedAge >= 80);
+                    }
                 }
                 
-                if(extractedData.pas24) document.getElementById('pas24').value = extractedData.pas24;
-                if(extractedData.pad24) document.getElementById('pad24').value = extractedData.pad24;
-                if(extractedData.pasJour) document.getElementById('pasJour').value = extractedData.pasJour;
-                if(extractedData.padJour) document.getElementById('padJour').value = extractedData.padJour;
-                if(extractedData.pasNuit) document.getElementById('pasNuit').value = extractedData.pasNuit;
-                if(extractedData.padNuit) document.getElementById('padNuit').value = extractedData.padNuit;
+                if(extractedData.pas24) document.getElementById('pas24').value = parseInt(extractedData.pas24) || "";
+                if(extractedData.pad24) document.getElementById('pad24').value = parseInt(extractedData.pad24) || "";
+                if(extractedData.pasJour) document.getElementById('pasJour').value = parseInt(extractedData.pasJour) || "";
+                if(extractedData.padJour) document.getElementById('padJour').value = parseInt(extractedData.padJour) || "";
+                if(extractedData.pasNuit) document.getElementById('pasNuit').value = parseInt(extractedData.pasNuit) || "";
+                if(extractedData.padNuit) document.getElementById('padNuit').value = parseInt(extractedData.padNuit) || "";
                 
-                if(extractedData.fc) document.getElementById('fcInput').value = extractedData.fc;
+                if(extractedData.fc) document.getElementById('fcInput').value = parseInt(extractedData.fc) || "";
+                if(extractedData.dippingSys !== undefined) document.getElementById('dipSys').value = extractedData.dippingSys;
+                if(extractedData.profilDipping) document.getElementById('profilDipping').value = extractedData.profilDipping;
+                
                 if(extractedData.validExam !== undefined) document.getElementById('critValid').checked = extractedData.validExam;
                 if(extractedData.loadHigh !== undefined) document.getElementById('critCT').value = extractedData.loadHigh ? "Oui" : "Non";
 
                 document.getElementById('manualSection').classList.remove('hidden');
                 document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-                if (extractedData.pas24 && extractedData.pasJour && extractedData.pasNuit && extractedData.nomPatient && extractedData.age) {
+                if (validateAllInputs()) {
                     await generateAndMergePDF();
-                    document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Identité et constantes lues par l'IA. Rapport généré !</span>";
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Données globales lues par l'IA. Rapport généré !</span>";
                 } else { 
-                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ Données lues partiellement. Vérifiez les cases vides, puis générez.</span>";
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ L'IA n'a pas pu tout lire. Vérifiez les cases rouges avant de générer.</span>";
                 }
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec de la connexion IA (" + err.message + "). Entrez les données ci-contre.</span>";
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec de la connexion IA (" + err.message + ").</span>";
                 document.getElementById('manualSection').classList.remove('hidden');
             }
         });
 
         // ==========================================
-        // VALIDATION & GÈNÈRATION DU PDF
+        // GÈNÈRATION DU PDF
         // ==========================================
-        function validateAllInputs() {
-            const requiredIds = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit'];
-            let isValid = true;
-            requiredIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el.value || el.value.trim() === '') { 
-                    el.classList.add('border-red-500', 'ring-1', 'ring-red-500'); 
-                    isValid = false; 
-                }
-            });
-            return isValid;
-        }
-
         document.getElementById('generateFinalBtn').addEventListener('click', async () => {
             if (!validateAllInputs()) {
                 alert("Impossible de générer le rapport. Veuillez remplir les cases encadrées en rouge.");
@@ -551,15 +602,18 @@
 
         async function generateAndMergePDF() {
             const fullName = document.getElementById('nomPatient').value.trim().toUpperCase();
-            const age = parseInt(document.getElementById('age').value);
+            const age = parseInt(document.getElementById('age').value) || 0;
             const isFrail = document.getElementById('isFrail').checked;
 
-            const pas24 = parseFloat(document.getElementById('pas24').value);
-            const pad24 = parseFloat(document.getElementById('pad24').value);
-            const pasJour = parseFloat(document.getElementById('pasJour').value);
-            const padJour = parseFloat(document.getElementById('padJour').value);
-            const pasNuit = parseFloat(document.getElementById('pasNuit').value);
-            const padNuit = parseFloat(document.getElementById('padNuit').value);
+            const pas24 = parseFloat(document.getElementById('pas24').value) || 0;
+            const pad24 = parseFloat(document.getElementById('pad24').value) || 0;
+            const pasJour = parseFloat(document.getElementById('pasJour').value) || 0;
+            const padJour = parseFloat(document.getElementById('padJour').value) || 0;
+            const pasNuit = parseFloat(document.getElementById('pasNuit').value) || 0;
+            const padNuit = parseFloat(document.getElementById('padNuit').value) || 0;
+
+            const dipSys = parseFloat(document.getElementById('dipSys').value) || 0;
+            const dippingProfile = document.getElementById('profilDipping').value;
 
             const examValid = document.getElementById('critValid').checked ? "Oui (Standard >70%)" : "Invalide / Partiel";
             const fc = document.getElementById('fcInput').value || "Non mesurée";
@@ -570,13 +624,6 @@
 
             const pp = pas24 - pad24;
             const ppAlert = pp > 60;
-            
-            const dipSys = (((pasJour - pasNuit) / pasJour) * 100).toFixed(1);
-            let dippingProfile = "";
-            if (dipSys < 0) dippingProfile = "Reverse Dipper (Inversion du rythme)";
-            else if (dipSys <= 10) dippingProfile = "Non-Dipper (Absence de baisse physiologique)";
-            else if (dipSys <= 20) dippingProfile = "Dipper (Physiologique)";
-            else dippingProfile = "Extreme Dipper (Baisse nocturne majeure)";
             
             let classification = "TA Non Élevée";
             if (pas24 >= 130 || pad24 >= 80) classification = "HTA Confirmée";
@@ -655,7 +702,7 @@
                     page.drawText(`-> Chronothérapie : Prise vespérale justifiée (Profil ${dippingProfile.split(' ')[0]}).`, { x: 50, y: currentY, size: 11, font: font });
                     currentY -= 15;
                 }
-                if(padNuit < 60) {
+                if(padNuit < 60 && padNuit > 0) {
                     currentY -= 10;
                     page.drawText(`VIGILANCE : La PAD nocturne est effondrée (${padNuit} mmHg). Risque d'hypoperfusion coronaire (Courbe en J).`, { x: 50, y: currentY, size: 11, font: fontBold, color: rgb(0.8, 0, 0) });
                     currentY -= 15;
