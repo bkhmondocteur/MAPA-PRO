@@ -388,7 +388,7 @@
 
         btnChangeApiKey.addEventListener('click', () => {
             const currentKey = localStorage.getItem('geminiApiKeyLocal') || '';
-            const newKey = prompt("Veuillez coller votre nouvelle clé API Gemini :", currentKey);
+            const newKey = prompt("Veuillez coller votre clé API Gemini (AIza...) :", currentKey);
             
             if (newKey !== null) {
                 if (newKey.trim() !== "") {
@@ -413,7 +413,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique Corrigée)
+        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -444,7 +444,7 @@
             const file = pdfUpload.files[0];
             if (!file) return;
             
-            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Analyse sémantique par Intelligence Artificielle en cours...</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Analyse sémantique en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -461,97 +461,55 @@
                 const textClean = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
 
                 let apiKey = localStorage.getItem('geminiApiKeyLocal');
-                
                 if (!apiKey) {
-                    apiKey = prompt("Première utilisation : Veuillez coller votre clé API Gemini (commençant par AQ...). Elle sera sauvegardée localement dans ce navigateur.");
+                    apiKey = prompt("Première utilisation : Veuillez coller votre clé API Gemini (AIza...).");
                     if (apiKey && apiKey.trim() !== "") {
                         localStorage.setItem('geminiApiKeyLocal', apiKey.trim());
                         document.getElementById('apiStatus').classList.remove('hidden');
                     } else {
-                        throw new Error("Clé API manquante. L'analyse IA ne peut pas démarrer.");
+                        throw new Error("Clé API manquante.");
                     }
                 }
                 
                 const promptClinique = `
-                    Tu es un cardiologue expert. Analyse ce texte brut extrait d'un rapport de MAPA.
-                    Extrais les valeurs moyennes exactes demandées. 
-                    Si le rapport indique un "Ratio Anormal" ou une "Charge (Load)" supérieure à 40%, défini loadHigh sur true.
-                    Si le rapport indique des mesures valides inférieures à 70%, défini validExam sur false.
-                    
-                    Tu dois impérativement répondre sous la forme d'un objet JSON strict encapsulé entre des balises de code markdown comme ceci :
-                    \`\`\`json
+                    Analyse ce rapport de MAPA. Extrais les moyennes PAS/PAD (24h, Jour, Nuit), FC, et le dipping.
+                    Réponds UNIQUEMENT avec cet objet JSON, sans aucune phrase autour :
                     {
-                        "pas24": nombre,
-                        "pad24": nombre,
-                        "pasJour": nombre,
-                        "padJour": nombre,
-                        "pasNuit": nombre,
-                        "padNuit": nombre,
-                        "fc": nombre,
-                        "loadHigh": true/false,
-                        "validExam": true/false
+                        "pas24": 0, "pad24": 0, "pasJour": 0, "padJour": 0, "pasNuit": 0, "padNuit": 0, "fc": 0,
+                        "loadHigh": false, "validExam": true
                     }
-                    \`\`\`
-                    Texte à analyser : ${textClean}
+                    Texte : ${textClean}
                 `;
 
-                // Suppression de la configuration restrictive pour éliminer l'erreur 400 sur clé GCP
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ 
-                        contents: [{ parts: [{ text: promptClinique }] }]
-                    })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: promptClinique }] }] })
                 });
 
-                if (!response.ok) {
-                    if (response.status === 400 || response.status === 403) {
-                        localStorage.removeItem('geminiApiKeyLocal');
-                        document.getElementById('apiStatus').classList.add('hidden');
-                    }
-                    throw new Error(`Erreur API (${response.status}). Vérifiez la clé.`);
-                }
+                if (!response.ok) throw new Error("Erreur serveur API (" + response.status + ").");
 
                 const responseData = await response.json();
                 let jsonText = responseData.candidates[0].content.parts[0].text;
                 
-                // Extraction propre du texte JSON renvoyé au format brut
-                if (jsonText.includes("```json")) {
-                    jsonText = jsonText.split("```json")[1].split("```")[0];
-                } else if (jsonText.includes("```")) {
-                    jsonText = jsonText.split("```")[1].split("```")[0];
-                }
-                
+                // Nettoyage robuste du JSON
+                jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '');
                 const extractedData = JSON.parse(jsonText.trim());
 
-                // Distribution des données
                 if(extractedData.pas24) document.getElementById('pas24').value = extractedData.pas24;
                 if(extractedData.pad24) document.getElementById('pad24').value = extractedData.pad24;
                 if(extractedData.pasJour) document.getElementById('pasJour').value = extractedData.pasJour;
                 if(extractedData.padJour) document.getElementById('padJour').value = extractedData.padJour;
                 if(extractedData.pasNuit) document.getElementById('pasNuit').value = extractedData.pasNuit;
                 if(extractedData.padNuit) document.getElementById('padNuit').value = extractedData.padNuit;
-                
                 if(extractedData.fc) document.getElementById('fcInput').value = extractedData.fc;
-                if(extractedData.validExam !== undefined) document.getElementById('critValid').checked = extractedData.validExam;
-                if(extractedData.loadHigh !== undefined) document.getElementById('critCT').value = extractedData.loadHigh ? "Oui" : "Non";
                 
-                // Affichage du panneau
                 document.getElementById('manualSection').classList.remove('hidden');
-                document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                if (extractedData.pas24 && extractedData.pasJour && extractedData.pasNuit) {
-                    await generateAndMergePDF();
-                    document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Données traitées par l'IA et rapport généré !</span>";
-                } else { 
-                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ L'IA a un doute sur certaines valeurs. Veuillez compléter et générer.</span>";
-                }
+                document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Données traitées !</span>";
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('statusMsg').innerHTML = `<span class='text-red-500 font-bold'>Échec de l'IA : ${err.message}. Passez en saisie manuelle.</span>`;
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec IA : " + err.message + ". Passez en manuel.</span>";
                 document.getElementById('manualSection').classList.remove('hidden');
             }
         });
