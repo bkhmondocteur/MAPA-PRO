@@ -49,7 +49,6 @@
                 <input type="password" id="pinUnlockInput" maxlength="4" placeholder="••••" class="w-full border border-slate-300 rounded-lg p-3 text-center text-2xl tracking-widest focus:ring-2 focus:ring-blue-500 outline-none" inputmode="numeric">
                 <div class="flex gap-2">
                     <button id="btnUnlock" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg">Déverrouiller</button>
-                    <button id="btnBio" class="bg-slate-200 text-slate-700 p-3 rounded-lg hidden">Biométrie</button>
                 </div>
                 <p id="unlockError" class="text-red-500 text-sm hidden font-medium">Code PIN incorrect.</p>
             </div>
@@ -269,16 +268,6 @@
             bodyContainer.classList.remove('locked-app');
         }
 
-        function lockApp() {
-            sessionStorage.removeItem('mapaUnlocked');
-            securityOverlay.classList.remove('hidden');
-            void securityOverlay.offsetWidth;
-            securityOverlay.classList.remove('opacity-0', 'pointer-events-none');
-            mainApp.classList.add('blur-sm', 'pointer-events-none');
-            bodyContainer.classList.add('locked-app');
-            checkSecurityState();
-        }
-
         function checkSecurityState() {
             licenceScreen.classList.add('hidden'); pinSetupScreen.classList.add('hidden'); unlockScreen.classList.add('hidden');
             if (sessionStorage.getItem('mapaUnlocked') === 'true') return unlockApp();
@@ -362,7 +351,7 @@
 
         btnChangeApiKey.addEventListener('click', () => {
             const currentKey = localStorage.getItem('geminiApiKeyLocal') || '';
-            const newKey = prompt("Veuillez coller votre nouvelle clé API Gemini :", currentKey);
+            const newKey = prompt("Veuillez coller votre clé API Gemini standard (AIza...) :", currentKey);
             
             if (newKey !== null) {
                 if (newKey.trim() !== "") {
@@ -387,7 +376,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique d'Identité & Constantes)
+        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Correction URL v1beta)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -403,7 +392,7 @@
             const file = pdfUpload.files[0];
             if (!file) return;
             
-            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Extraction de l'identité et analyse sémantique par l'IA en cours...</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Extraction et analyse sémantique par l'IA en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -421,7 +410,7 @@
 
                 let apiKey = localStorage.getItem('geminiApiKeyLocal');
                 if (!apiKey) {
-                    apiKey = prompt("Première utilisation : Veuillez coller votre clé API Gemini (AIza...).");
+                    apiKey = prompt("Première utilisation : Veuillez coller votre clé API Gemini standard (AIza...).");
                     if (apiKey && apiKey.trim() !== "") {
                         localStorage.setItem('geminiApiKeyLocal', apiKey.trim());
                         document.getElementById('apiStatus').classList.remove('hidden');
@@ -432,24 +421,25 @@
                 
                 const promptClinique = `
                     Analyse ce rapport de MAPA. Extrais impérativement le nom complet du patient, son âge, les moyennes PAS/PAD (24h, Jour, Nuit), FC, et le dipping.
-                    Réponds UNIQUEMENT avec cet objet JSON, sans aucune phrase autour :
+                    Réponds UNIQUEMENT avec cet objet JSON, sans aucune phrase ou markdown autour :
                     {
                         "nomPatient": "Nom et prénom du patient trouvé",
                         "age": nombre_age_trouvé,
                         "pas24": nombre, "pad24": nombre, "pasJour": nombre, "padJour": nombre, "pasNuit": nombre, "padNuit": nombre, "fc": nombre,
                         "loadHigh": false, "validExam": true
                     }
-                    Texte : ${textClean}
+                    Texte du rapport : ${textClean}
                 `;
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                // Correction de l'URL pour utiliser le canal de distribution web standard (v1beta)
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ contents: [{ parts: [{ text: promptClinique }] }] })
                 });
 
                 if (!response.ok) {
-                    if (response.status === 400 || response.status === 403) {
+                    if (response.status === 400 || response.status === 403 || response.status === 404) {
                         localStorage.removeItem('geminiApiKeyLocal');
                         document.getElementById('apiStatus').classList.add('hidden');
                     }
@@ -459,10 +449,11 @@
                 const responseData = await response.json();
                 let jsonText = responseData.candidates[0].content.parts[0].text;
                 
-                jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '');
-                const extractedData = JSON.parse(jsonText.trim());
+                // Nettoyage robuste de toute scorie de mise en forme texte ou markdown
+                jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
+                const extractedData = JSON.parse(jsonText);
 
-                // Distribution des données extraites (Identité incluse !)
+                // Distribution des données vers le tableau de bord
                 if(extractedData.nomPatient) document.getElementById('nomPatient').value = extractedData.nomPatient;
                 if(extractedData.age) document.getElementById('age').value = extractedData.age;
                 if(extractedData.pas24) document.getElementById('pas24').value = extractedData.pas24;
@@ -475,7 +466,6 @@
                 if(extractedData.validExam !== undefined) document.getElementById('critValid').checked = extractedData.validExam;
                 if(extractedData.loadHigh !== undefined) document.getElementById('critCT').value = extractedData.loadHigh ? "Oui" : "Non";
                 
-                // Gestion du flag de fragilité si l'âge est >= 80
                 if(extractedData.age >= 80) document.getElementById('isFrail').checked = true;
 
                 document.getElementById('manualSection').classList.remove('hidden');
@@ -485,12 +475,12 @@
                     await generateAndMergePDF();
                     document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Identité et constantes extraites. Rapport généré avec succès !</span>";
                 } else { 
-                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ Données lues partiellement. Vérifiez l'identité et complétez les cases vides avant de générer.</span>";
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ Données lues partiellement. Vérifiez les cases vides avant de valider.</span>";
                 }
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec IA : " + err.message + ". Entrez les données manuellement ci-contre.</span>";
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec IA : " + err.message + ". Saisissez les données manuellement.</span>";
                 document.getElementById('manualSection').classList.remove('hidden');
             }
         });
@@ -511,7 +501,7 @@
 
         document.getElementById('generateFinalBtn').addEventListener('click', async () => {
             if (!validateAllInputs()) {
-                alert("Veuillez vérifier que l'identité (extraite par l'IA) et les paramètres vasculaires sont complets.");
+                alert("Veuillez vérifier que l'identité et les paramètres vasculaires sont complets.");
                 return;
             }
             document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Création du document d'expertise...</span>";
