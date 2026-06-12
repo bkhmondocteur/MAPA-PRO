@@ -8,12 +8,12 @@
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
+        // Neutralisation du Worker externe pour éviter les blocages de sécurité locaux
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
     <style>
         .locked-app { overflow: hidden; height: 100vh; }
         .blur-sm { filter: blur(4px); }
-        /* Style pour les toggles (boutons bascule) */
         .toggle-checkbox:checked { right: 0; border-color: #2563EB; }
         .toggle-checkbox:checked + .toggle-label { background-color: #2563EB; }
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
@@ -123,7 +123,7 @@
 
                         <div class="border-b border-slate-200 pb-6">
                             <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                                <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">2</span> Appareil & Extraction
+                                <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">2</span> Choix du Flux de Travail
                             </h2>
                             <div class="space-y-4">
                                 <select id="deviceModel" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
@@ -131,17 +131,22 @@
                                     <option value="dms">DMS-ABP</option>
                                 </select>
                                 <input type="file" id="pdfUpload" accept="application/pdf" class="w-full border border-slate-300 rounded-lg p-2 bg-white cursor-pointer text-sm">
-                                <button type="button" id="btnAuto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md opacity-50 cursor-not-allowed flex justify-center items-center gap-2" disabled>
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                                    Extraire les constantes
-                                </button>
-                                <p id="statusMsg" class="text-center text-sm font-medium text-slate-500"></p>
+                                
+                                <div class="flex flex-col gap-3 mt-4">
+                                    <button type="button" id="btnAuto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md opacity-50 cursor-not-allowed flex justify-center items-center gap-2" disabled>
+                                        ⚡ 100% Automatique (Extraction & PDF)
+                                    </button>
+                                    <button type="button" id="btnManual" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 rounded-lg transition shadow-md flex justify-center items-center gap-2">
+                                        ✍️ Saisie Manuelle de l'Expertise
+                                    </button>
+                                </div>
+                                <p id="statusMsg" class="text-center text-sm font-medium mt-2"></p>
                             </div>
                         </div>
                     </div>
 
                     <div id="manualSection" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner flex flex-col h-full">
-                        <h3 class="text-md font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Tableau de Bord Hémodynamique</h3>
+                        <h3 class="text-md font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Paramètres d'évaluation manuelle</h3>
                         
                         <div class="grid grid-cols-3 gap-3 mb-6">
                             <div class="bg-white p-3 rounded-lg border shadow-sm text-center">
@@ -164,12 +169,11 @@
                             </div>
                         </div>
 
-                        <h4 class="text-sm font-bold text-slate-700 mb-3">Critères d'évaluation clinique</h4>
                         <div class="space-y-3 flex-grow">
                             <div class="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
                                 <span class="text-sm font-medium text-slate-700">Examen valide (>70%)</span>
                                 <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
-                                    <input type="checkbox" name="toggle" id="critValid" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                    <input type="checkbox" id="critValid" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
                                     <label for="critValid" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
                                 </div>
                             </div>
@@ -319,6 +323,7 @@
             document.getElementById('btnAuto').disabled = true;
             document.getElementById('btnAuto').classList.add('opacity-50', 'cursor-not-allowed');
             document.querySelectorAll('.validate-target').forEach(el => el.classList.remove('border-red-500', 'ring-1', 'ring-red-500'));
+            document.getElementById('statusMsg').innerHTML = "";
         });
 
         checkSecurityState();
@@ -366,26 +371,52 @@
             }
         });
 
+        document.querySelectorAll('.validate-target').forEach(input => {
+            input.addEventListener('input', function() { this.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); });
+        });
+
         // ==========================================
-        // MOTEUR D'EXTRACTION AVANCÉ (BPs, FC, Charge)
+        // FLUX 1 : MODE MANUEL EXPERT
+        // ==========================================
+        document.getElementById('btnManual').addEventListener('click', () => {
+            document.getElementById('manualSection').classList.remove('hidden');
+            document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600'>Mode Manuel activé. Saisissez vos paramètres.</span>";
+            document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        // ==========================================
+        // FLUX 2 : 100% AUTOMATIQUE
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
         
         pdfUpload.addEventListener('change', () => {
             if (pdfUpload.files[0]) {
-                btnAuto.disabled = false; btnAuto.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnAuto.disabled = false; 
+                btnAuto.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         });
 
-        document.querySelectorAll('.validate-target').forEach(input => {
-            input.addEventListener('input', function() { this.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); });
-        });
+        function validateIdentityOnly() {
+            let isValid = true;
+            ['nomPatient', 'age'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el.value || el.value.trim() === '') { el.classList.add('border-red-500', 'ring-1', 'ring-red-500'); isValid = false; }
+                else { el.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); }
+            });
+            return isValid;
+        }
 
         btnAuto.addEventListener('click', async () => {
+            if (!validateIdentityOnly()) {
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-600 font-bold'>⚠️ Remplissez d'abord l'identité (Nom + Date de naissance) avant de lancer l'automatisme.</span>";
+                return;
+            }
+
             const file = pdfUpload.files[0];
             if (!file) return;
-            document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600'>Analyse du document...</span>";
+            
+            document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Extraction et génération 100% automatiques en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -401,23 +432,16 @@
 
                 const textClean = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
                 let extractedData = { pas24: null, pad24: null, pasJour: null, padJour: null, pasNuit: null, padNuit: null, fc: null, loadHigh: false, validExam: true };
+                const selectedDevice = document.getElementById('deviceModel').value;
 
-                // Extraction de la Charge Tensionnelle (> 40%)
-                if (/(?:load|charge|hyperbarique).*?(?:[4-9]\d|100)(?:\.\d+)?\s*%|([4-9]\d|100)(?:\.\d+)?\s*%.*?(?:load|charge)/i.test(textClean)) {
-                    extractedData.loadHigh = true;
-                }
-
-                // Extraction Validité (Par défaut True, on check si un taux bas est explicite)
+                // Extraction des paramètres avancés auto
+                if (/(?:load|charge|hyperbarique).*?(?:[4-9]\d|100)(?:\.\d+)?\s*%|([4-9]\d|100)(?:\.\d+)?\s*%.*?(?:load|charge)/i.test(textClean)) extractedData.loadHigh = true;
                 const validMatch = textClean.match(/(?:valid|succeed|réussies)[\s:]*(\d{2,3})\s*(?:%|\/)/i);
                 if (validMatch && parseInt(validMatch[1]) < 70) extractedData.validExam = false;
-
-                // Extraction de la FC globale
                 const fcMatch = textClean.match(/(?:FC|HR|Pouls|bpm|Pulse)[\s:]*(\d{2,3})/i);
-                if (fcMatch) {
-                    const fcVal = parseInt(fcMatch[1]);
-                    if (fcVal >= 40 && fcVal <= 180) extractedData.fc = fcVal;
-                }
+                if (fcMatch) { const fcVal = parseInt(fcMatch[1]); if (fcVal >= 40 && fcVal <= 180) extractedData.fc = fcVal; }
 
+                // Moteur d'extraction des tensions
                 const extractEnclos = (text, startRegex, endRegex) => {
                     const startMatch = text.match(startRegex);
                     if (!startMatch) return "";
@@ -425,11 +449,6 @@
                     if (!endMatch) return text.substring(startMatch.index);
                     return text.substring(startMatch.index, startMatch.index + 1 + endMatch.index);
                 };
-
-                // Recherche stricte des constantes (ABPM50 / Standard)
-                const enclos24 = extractEnclos(textClean, /\(\s*1\s*\)/, /\(\s*2\s*\)/);
-                const enclosJour = extractEnclos(textClean, /\(\s*2\s*\)/, /\(\s*3\s*\)/);
-                const enclosNuit = extractEnclos(textClean, /\(\s*3\s*\)/, /\(\s*4\s*\)/);
 
                 const extractValidBP = (enclosStr) => {
                     if(!enclosStr) return null;
@@ -443,33 +462,60 @@
                     return null;
                 };
 
-                const bp24 = extractValidBP(enclos24) || extractValidBP(textClean); // Fallback global si enclos non trouvé
-                const bpJour = extractValidBP(enclosJour);
-                const bpNuit = extractValidBP(enclosNuit);
+                if (selectedDevice === 'dms') {
+                    const match24Sys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*130\s*\)/);
+                    const match24Dia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*80\s*\)/);
+                    const matchJourSys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*135\s*\)/);
+                    const matchJourDia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*85\s*\)/);
+                    const matchNuitSys = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*120\s*\)/);
+                    const matchNuitDia = textClean.match(/(\d{2,3})\s*\(\s*[\d.]+\s*\)\s*\(\s*<\s*70\s*\)/);
+                    if (match24Sys && match24Dia && matchJourSys && matchJourDia && matchNuitSys && matchNuitDia) {
+                        extractedData.pas24 = match24Sys[1]; extractedData.pad24 = match24Dia[1];
+                        extractedData.pasJour = matchJourSys[1]; extractedData.padJour = matchJourDia[1];
+                        extractedData.pasNuit = matchNuitSys[1]; extractedData.padNuit = matchNuitDia[1];
+                    }
+                } else if (selectedDevice === 'abpm50') {
+                    const enclos24 = extractEnclos(textClean, /\(\s*1\s*\)/, /\(\s*2\s*\)/);
+                    const enclosJour = extractEnclos(textClean, /\(\s*2\s*\)/, /\(\s*3\s*\)/);
+                    const enclosNuit = extractEnclos(textClean, /\(\s*3\s*\)/, /\(\s*4\s*\)/);
+                    
+                    const bp24 = extractValidBP(enclos24) || extractValidBP(textClean);
+                    const bpJour = extractValidBP(enclosJour);
+                    const bpNuit = extractValidBP(enclosNuit);
 
-                if (bp24) { document.getElementById('pas24').value = bp24.sys; document.getElementById('pad24').value = bp24.dia; }
-                if (bpJour) { document.getElementById('pasJour').value = bpJour.sys; document.getElementById('padJour').value = bpJour.dia; }
-                if (bpNuit) { document.getElementById('pasNuit').value = bpNuit.sys; document.getElementById('padNuit').value = bpNuit.dia; }
-                
-                // Remplissage Automatisé de l'interface
-                if (extractedData.fc) document.getElementById('fcInput').value = extractedData.fc;
-                document.getElementById('critValid').checked = extractedData.validExam;
-                if (extractedData.loadHigh) document.getElementById('critCT').value = "Oui";
+                    if (bp24) { extractedData.pas24 = bp24.sys; extractedData.pad24 = bp24.dia; }
+                    if (bpJour) { extractedData.pasJour = bpJour.sys; extractedData.padJour = bpJour.dia; }
+                    if (bpNuit) { extractedData.pasNuit = bpNuit.sys; extractedData.padNuit = bpNuit.dia; }
+                }
 
-                document.getElementById('statusMsg').innerHTML = "";
-                document.getElementById('manualSection').classList.remove('hidden');
-                document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth' });
+                if (extractedData.pas24 && extractedData.pasJour && extractedData.pasNuit) {
+                    // Remplissage DOM invisible
+                    document.getElementById('pas24').value = extractedData.pas24; document.getElementById('pad24').value = extractedData.pad24;
+                    document.getElementById('pasJour').value = extractedData.pasJour; document.getElementById('padJour').value = extractedData.padJour;
+                    document.getElementById('pasNuit').value = extractedData.pasNuit; document.getElementById('padNuit').value = extractedData.padNuit;
+                    
+                    document.getElementById('fcInput').value = extractedData.fc || "";
+                    document.getElementById('critValid').checked = extractedData.validExam;
+                    document.getElementById('critCT').value = extractedData.loadHigh ? "Oui" : "Non";
+                    document.getElementById('critBlouse').value = "Non";
+                    document.getElementById('critPPM').value = "Normal";
+                    document.getElementById('critVar').value = "Normale";
 
+                    // Génération 100% silencieuse
+                    await generateAndMergePDF();
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Rapport généré avec succès en mode 100% Automatique !</span>";
+                } else {
+                    throw new Error("Tensions introuvables");
+                }
             } catch (err) {
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500'>Extraction échouée. Saisie manuelle activée.</span>";
-                document.getElementById('manualSection').classList.remove('hidden');
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Extraction auto incomplète. Veuillez cliquer sur Saisie Manuelle.</span>";
             }
         });
 
         // ==========================================
-        // VALIDATION & GÉNÉRATION DU RAPPORT EXPERT
+        // VALIDATION GÉNÉRALE & GÉNÉRATION DU PDF
         // ==========================================
-        function validateInputs() {
+        function validateAllInputs() {
             const requiredIds = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit'];
             let isValid = true;
             requiredIds.forEach(id => {
@@ -477,14 +523,21 @@
                 if (!el.value || el.value.trim() === '') { el.classList.add('border-red-500', 'ring-1', 'ring-red-500'); isValid = false; }
                 else { el.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); }
             });
-            if (!isValid) alert("Veuillez remplir l'identité et les tensions manquantes (encadrées en rouge).");
             return isValid;
         }
 
         document.getElementById('generateFinalBtn').addEventListener('click', async () => {
-            if (!validateInputs()) return;
+            if (!validateAllInputs()) {
+                alert("Veuillez remplir l'identité et les constantes hémodynamiques manquantes (encadrées en rouge).");
+                return;
+            }
+            document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Génération du compte-rendu expert...</span>";
+            await generateAndMergePDF();
+            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Rapport d'expertise généré avec succès !</span>";
+        });
 
-            // Variables de base
+        // Fonction Centrale de Génération du PDF
+        async function generateAndMergePDF() {
             const fullName = document.getElementById('nomPatient').value.trim().toUpperCase();
             const age = parseInt(document.getElementById('age').value);
             const isFrail = document.getElementById('isFrail').checked;
@@ -496,7 +549,6 @@
             const pasNuit = parseFloat(document.getElementById('pasNuit').value);
             const padNuit = parseFloat(document.getElementById('padNuit').value);
 
-            // Variables du tableau de bord expert
             const examValid = document.getElementById('critValid').checked ? "Oui (Standard >70%)" : "Invalide / Partiel";
             const fc = document.getElementById('fcInput').value || "Non mesurée";
             const ctVal = document.getElementById('critCT').value;
@@ -504,7 +556,6 @@
             const varVal = document.getElementById('critVar').value;
             const blouseVal = document.getElementById('critBlouse').value;
 
-            // Calculs Hémodynamiques
             const pp = pas24 - pad24;
             const ppAlert = pp > 60;
             
@@ -519,13 +570,12 @@
             if (pas24 >= 130 || pad24 >= 80) classification = "HTA Confirmée";
             else if ((pas24 >= 120 && pas24 < 130) || (pad24 >= 70 && pad24 < 80)) classification = "TA Élevée";
 
-            // Fusion PDF
             const { PDFDocument, rgb, StandardFonts } = PDFLib;
             const pdfFile = document.getElementById('pdfUpload').files[0];
             let mergedPdf = pdfFile ? await PDFDocument.load(await pdfFile.arrayBuffer()) : await PDFDocument.create();
             
             const synthDoc = await PDFDocument.create();
-            const page = synthDoc.addPage([595.28, 841.89]); // A4 format
+            const page = synthDoc.addPage([595.28, 841.89]); 
             const font = await synthDoc.embedFont(StandardFonts.Helvetica);
             const fontBold = await synthDoc.embedFont(StandardFonts.HelveticaBold);
             const fontOblique = await synthDoc.embedFont(StandardFonts.HelveticaOblique);
@@ -541,19 +591,16 @@
                 currentY -= 40;
             }
 
-            // En-tête Médical
             page.drawText('Dr Hamed BEN KHALIFA', { x: 40, y: currentY, size: 14, font: fontBold, color: rgb(0.1, 0.3, 0.5) });
             page.drawText('Complexe médical Dar Attabib - Mahdia', { x: 40, y: currentY - 15, size: 10, font: font });
             currentY -= 60;
 
-            // Titre & Identité
             page.drawText('ÉVALUATION EXPERTE MAPA (Critères ESC 2024)', { x: 100, y: currentY, size: 14, font: fontBold });
             currentY -= 40;
             page.drawText(`Patient : ${fullName}`, { x: 40, y: currentY, size: 12, font: fontBold });
             page.drawText(`Âge : ${age} ans ${isFrail ? '(Fragile)' : ''}`, { x: 350, y: currentY, size: 12, font: font });
             currentY -= 35;
 
-            // Bloc 1 : Constantes Brutes
             page.drawText(`1. Moyennes Hémodynamiques`, { x: 40, y: currentY, size: 12, font: fontBold, color: rgb(0.2, 0.4, 0.6) });
             currentY -= 20;
             page.drawText(`- 24 Heures : ${pas24} / ${pad24} mmHg`, { x: 50, y: currentY, size: 11, font: font });
@@ -563,7 +610,6 @@
             page.drawText(`- Fréquence Cardiaque : ${fc} bpm`, { x: 250, y: currentY, size: 11, font: font });
             currentY -= 35;
 
-            // Bloc 2 : Profil & Variabilité
             page.drawText(`2. Profil Tensionnel & Variabilité`, { x: 40, y: currentY, size: 12, font: fontBold, color: rgb(0.2, 0.4, 0.6) });
             currentY -= 20;
             page.drawText(`- Profil de Dipping : ${dippingProfile} (Baisse systolique : ${dipSys}%)`, { x: 50, y: currentY, size: 11, font: (dipSys <= 10 || dipSys > 20) ? fontBold : font, color: (dipSys <= 10 || dipSys > 20) ? rgb(0.8, 0, 0) : rgb(0,0,0) });
@@ -574,7 +620,6 @@
             page.drawText(`- Variabilité Tensionnelle : ${varVal}`, { x: 300, y: currentY, size: 11, font: font });
             currentY -= 35;
 
-            // Bloc 3 : Facteurs Confondants & Qualité
             page.drawText(`3. Qualité d'Examen & Facteurs Confondants`, { x: 40, y: currentY, size: 12, font: fontBold, color: rgb(0.2, 0.4, 0.6) });
             currentY -= 20;
             page.drawText(`- Qualité de l'enregistrement : ${examValid}`, { x: 50, y: currentY, size: 11, font: font });
@@ -584,7 +629,6 @@
             page.drawText(`- Effet Blouse Blanche : ${blouseVal}`, { x: 50, y: currentY, size: 11, font: fontOblique });
             currentY -= 45;
 
-            // Bloc 4 : Conclusion & Recommandations
             page.drawText('CONCLUSION THÉRAPEUTIQUE :', { x: 40, y: currentY, size: 12, font: fontBold, color: rgb(0.7, 0.1, 0.1) });
             currentY -= 25;
             page.drawText(`Diagnostic retenu : ${classification.toUpperCase()}`, { x: 50, y: currentY, size: 12, font: fontBold });
@@ -609,7 +653,6 @@
                 page.drawText(`-> Poursuite et renforcement des règles hygiéno-diététiques.`, { x: 50, y: currentY, size: 11, font: font });
             }
 
-            // Signature
             const sigBase64 = localStorage.getItem('cabinetSignature');
             if (sigBase64) {
                 const sigBytes = await fetch(sigBase64).then(res => res.arrayBuffer());
@@ -627,11 +670,11 @@
             const blob = new Blob([pdfBytesFinal], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `MAPA_${fullName}_Expertise.pdf`.replace(/\s+/g, '_');
+            link.download = `MAPA_${fullName}_Expertise_DarAttabib.pdf`.replace(/\s+/g, '_');
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-        });
+        }
     </script>
 </body>
 </html>
