@@ -55,7 +55,8 @@
             </div>
         </div>
     </div>
-<div id="mainApp" class="blur-sm transition-all duration-300 max-w-5xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200 my-4 md:my-8 pointer-events-none">
+
+    <div id="mainApp" class="blur-sm transition-all duration-300 max-w-5xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden border border-slate-200 my-4 md:my-8 pointer-events-none">
         
         <div class="bg-slate-800 p-6 flex flex-col md:flex-row justify-between items-center text-white">
             <div class="text-center md:text-left mb-4 md:mb-0">
@@ -97,84 +98,75 @@
                 </details>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="space-y-8">
-                        <div class="border-b border-slate-200 pb-6">
-                            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                                <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">1</span> Identité
-                            </h2>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">Nom & Prénom</label>
-                                    <input type="text" id="nomPatient" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 validate-target" autocomplete="off">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">Date de naissance</label>
-                                    <input type="text" id="dobPatient" placeholder="JJ/MM/AAAA" maxlength="10" inputmode="numeric" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 text-center validate-target" autocomplete="off">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">Âge (Auto)</label>
-                                    <input type="number" id="age" class="w-full border border-slate-300 bg-slate-50 rounded-lg p-2 text-slate-700 font-bold focus:ring-2 focus:ring-blue-500 validate-target" readonly>
-                                </div>
-                                <div class="col-span-2 flex items-center pt-2">
-                                    <label class="inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="isFrail" class="form-checkbox h-5 w-5 text-blue-600 rounded">
-                                        <span class="ml-2 text-slate-700 text-sm font-medium">Sujet âgé fragile</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="border-b border-slate-200 pb-6">
-                            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                                <span class="bg-slate-200 text-slate-700 rounded-full w-6 h-6 inline-flex items-center justify-center text-sm mr-2">2</span> Choix du Flux de Travail
+                    <div class="space-y-8 flex flex-col justify-center border-r border-slate-100 pr-0 lg:pr-8">
+                        <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-sm text-center">
+                            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center justify-center">
+                                📊 Analyse du Rapport Holter
                             </h2>
                             <div class="space-y-4">
+                                <label class="block text-sm font-medium text-slate-600 text-left mb-1">Modèle d'appareil MAPA</label>
                                 <select id="deviceModel" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                                     <option value="abpm50">ABPM50 / Appareils standard (Blocs de données)</option>
                                     <option value="dms">DMS-ABP</option>
                                 </select>
+                                
+                                <label class="block text-sm font-medium text-slate-600 text-left mb-1">Importer le fichier PDF du rapport</label>
                                 <input type="file" id="pdfUpload" accept="application/pdf" class="w-full border border-slate-300 rounded-lg p-2 bg-white cursor-pointer text-sm">
                                 
-                                <div class="flex flex-col gap-3 mt-4">
-                                    <button type="button" id="btnAuto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition shadow-md opacity-50 cursor-not-allowed flex justify-center items-center gap-2" disabled>
-                                        ⚡ 100% Automatique (Extraction & PDF)
+                                <div class="flex flex-col gap-3 mt-6">
+                                    <button type="button" id="btnAuto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-md opacity-50 cursor-not-allowed flex justify-center items-center gap-2" disabled>
+                                        ⚡ Lancer l'Analyse Automatique par l'IA
                                     </button>
-                                    <button type="button" id="btnManual" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-bold py-3 rounded-lg transition shadow-md flex justify-center items-center gap-2">
-                                        ✍️ Saisie Manuelle de l'Expertise
+                                    <button type="button" id="btnManual" class="w-full bg-slate-600 hover:bg-slate-700 text-white font-medium py-2.5 rounded-lg transition text-sm">
+                                        Saisie Manuelle Directe
                                     </button>
                                 </div>
-                                <p id="statusMsg" class="text-center text-sm font-medium mt-2"></p>
+                                <p id="statusMsg" class="text-center text-sm font-medium mt-4 min-h-[20px]"></p>
                             </div>
                         </div>
                     </div>
 
                     <div id="manualSection" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner flex flex-col h-full">
-                        <h3 class="text-md font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Paramètres d'évaluation manuelle</h3>
+                        <h3 class="text-md font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Données d'évaluation clinique</h3>
                         
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-white p-3 rounded-lg border shadow-sm">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Nom & Prénom Patient</label>
+                                <input type="text" id="nomPatient" class="w-full text-sm font-bold text-slate-700 bg-transparent outline-none border-b border-transparent focus:border-blue-500 p-0">
+                            </div>
+                            <div class="bg-white p-3 rounded-lg border shadow-sm">
+                                <label class="block text-xs font-medium text-slate-500 mb-1">Âge (ans)</label>
+                                <input type="number" id="age" class="w-full text-sm font-bold text-slate-700 bg-transparent outline-none border-b border-transparent focus:border-blue-500 p-0">
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-3 gap-3 mb-6">
                             <div class="bg-white p-3 rounded-lg border shadow-sm text-center">
                                 <div class="text-xs font-semibold text-slate-500 mb-1">24H (<130/80)</div>
                                 <div class="flex justify-center items-center gap-1">
-                                    <input type="number" id="pas24" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent validate-target outline-none p-0"><span class="text-slate-400">/</span><input type="number" id="pad24" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent validate-target outline-none p-0">
+                                    <input type="number" id="pas24" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent outline-none p-0"><span class="text-slate-400">/</span><input type="number" id="pad24" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent outline-none p-0">
                                 </div>
                             </div>
                             <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 shadow-sm text-center">
                                 <div class="text-xs font-semibold text-yellow-600 mb-1">Jour (<135/85)</div>
                                 <div class="flex justify-center items-center gap-1">
-                                    <input type="number" id="pasJour" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent validate-target outline-none p-0"><span class="text-slate-400">/</span><input type="number" id="padJour" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent validate-target outline-none p-0">
+                                    <input type="number" id="pasJour" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent outline-none p-0"><span class="text-slate-400">/</span><input type="number" id="padJour" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent outline-none p-0">
                                 </div>
                             </div>
                             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 shadow-sm text-center">
                                 <div class="text-xs font-semibold text-indigo-600 mb-1">Nuit (<120/70)</div>
                                 <div class="flex justify-center items-center gap-1">
-                                    <input type="number" id="pasNuit" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent validate-target outline-none p-0"><span class="text-slate-400">/</span><input type="number" id="padNuit" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent validate-target outline-none p-0">
+                                    <input type="number" id="pasNuit" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent outline-none p-0"><span class="text-slate-400">/</span><input type="number" id="padNuit" class="w-12 border-b text-center font-bold text-slate-700 bg-transparent outline-none p-0">
                                 </div>
                             </div>
                         </div>
 
                         <div class="space-y-3 flex-grow">
                             <div class="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
-                                <span class="text-sm font-medium text-slate-700">Examen valide (>70%)</span>
+                                <div class="flex flex-col">
+                                    <span class="text-sm font-medium text-slate-700">Examen valide (>70%)</span>
+                                    <span class="text-xs text-slate-400">Nombre de mesures suffisant</span>
+                                </div>
                                 <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
                                     <input type="checkbox" id="critValid" checked class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
                                     <label for="critValid" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
@@ -216,6 +208,14 @@
                                 <span class="text-sm font-medium text-slate-700 flex-grow">Fréquence Cardiaque (Moyenne)</span>
                                 <input type="number" id="fcInput" placeholder="bpm" class="w-20 border-b-2 border-slate-300 text-center font-bold text-slate-700 outline-none p-1 bg-transparent">
                             </div>
+
+                            <div class="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
+                                <span class="text-sm font-medium text-slate-700">Sujet âgé fragile</span>
+                                <div class="relative inline-block w-12 mr-2 align-middle select-none transition duration-200 ease-in">
+                                    <input type="checkbox" id="isFrail" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"/>
+                                    <label for="isFrail" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+                                </div>
+                            </div>
                         </div>
 
                         <button type="button" id="generateFinalBtn" class="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl transition shadow-lg flex justify-center items-center gap-2">
@@ -227,7 +227,8 @@
             </form>
         </div>
     </div>
-<script>
+
+    <script>
         // ==========================================
         // SÉCURITÉ & LICENCE
         // ==========================================
@@ -294,7 +295,6 @@
             else { 
                 unlockScreen.classList.remove('hidden'); 
                 document.getElementById('pinUnlockInput').value = ""; document.getElementById('pinUnlockInput').focus(); 
-                if (window.PublicKeyCredential) document.getElementById('btnBio').classList.remove('hidden');
             }
         }
 
@@ -325,13 +325,12 @@
             document.getElementById('manualSection').classList.add('hidden');
             document.getElementById('btnAuto').disabled = true;
             document.getElementById('btnAuto').classList.add('opacity-50', 'cursor-not-allowed');
-            document.querySelectorAll('.validate-target').forEach(el => el.classList.remove('border-red-500', 'ring-1', 'ring-red-500'));
             document.getElementById('statusMsg').innerHTML = "";
         });
 
         checkSecurityState();
 
-        // LOGOS & SIGNATURES
+        // LOGOS & SIGNATURES LOCAL STORAGE
         const fileToBase64 = file => new Promise((resolve, reject) => {
             const reader = new FileReader(); reader.readAsDataURL(file);
             reader.onload = () => resolve(reader.result); reader.onerror = reject;
@@ -349,32 +348,7 @@
             if (localStorage.getItem('cabinetSignature')) document.getElementById('sigStatus').classList.remove('hidden');
         });
 
-        // DATE DE NAISSANCE & ÂGE
-        document.getElementById('dobPatient').addEventListener('input', function() {
-            let val = this.value.replace(/\D/g, ''); 
-            if (val.length > 4) this.value = val.slice(0, 2) + '/' + val.slice(2, 4) + '/' + val.slice(4, 8);
-            else if (val.length > 2) this.value = val.slice(0, 2) + '/' + val.slice(2);
-            else this.value = val;
-
-            if (this.value.length === 10) {
-                const parts = this.value.split('/');
-                const dob = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-                if (!isNaN(dob.getTime())) {
-                    const today = new Date();
-                    let calcAge = today.getFullYear() - dob.getFullYear();
-                    if (today.getMonth() < dob.getMonth() || (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) calcAge--;
-                    const ageInp = document.getElementById('age');
-                    ageInp.value = calcAge;
-                    ageInp.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
-                    this.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
-                }
-            }
-        });
-
-        document.querySelectorAll('.validate-target').forEach(input => {
-            input.addEventListener('input', function() { this.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); });
-        });
-// ==========================================
+        // ==========================================
         // GESTION DU BOUTON CLÉ API
         // ==========================================
         const btnChangeApiKey = document.getElementById('btnChangeApiKey');
@@ -388,7 +362,7 @@
 
         btnChangeApiKey.addEventListener('click', () => {
             const currentKey = localStorage.getItem('geminiApiKeyLocal') || '';
-            const newKey = prompt("Veuillez coller votre clé API Gemini (AIza...) :", currentKey);
+            const newKey = prompt("Veuillez coller votre nouvelle clé API Gemini :", currentKey);
             
             if (newKey !== null) {
                 if (newKey.trim() !== "") {
@@ -413,7 +387,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique)
+        // FLUX 2 : INTELLIGENCE ARTIFICIELLE (Extraction Sémantique d'Identité & Constantes)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -425,26 +399,11 @@
             }
         });
 
-        function validateIdentityOnly() {
-            let isValid = true;
-            ['nomPatient', 'dobPatient', 'age'].forEach(id => {
-                const el = document.getElementById(id);
-                if (!el.value || el.value.trim() === '') { el.classList.add('border-red-500', 'ring-1', 'ring-red-500'); isValid = false; }
-                else { el.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); }
-            });
-            return isValid;
-        }
-
         btnAuto.addEventListener('click', async () => {
-            if (!validateIdentityOnly()) {
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-600 font-bold'>⚠️ Remplissez d'abord l'identité avant de lancer l'automatisme.</span>";
-                return;
-            }
-
             const file = pdfUpload.files[0];
             if (!file) return;
             
-            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Analyse sémantique en cours...</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>🧠 Extraction de l'identité et analyse sémantique par l'IA en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -472,10 +431,12 @@
                 }
                 
                 const promptClinique = `
-                    Analyse ce rapport de MAPA. Extrais les moyennes PAS/PAD (24h, Jour, Nuit), FC, et le dipping.
+                    Analyse ce rapport de MAPA. Extrais impérativement le nom complet du patient, son âge, les moyennes PAS/PAD (24h, Jour, Nuit), FC, et le dipping.
                     Réponds UNIQUEMENT avec cet objet JSON, sans aucune phrase autour :
                     {
-                        "pas24": 0, "pad24": 0, "pasJour": 0, "padJour": 0, "pasNuit": 0, "padNuit": 0, "fc": 0,
+                        "nomPatient": "Nom et prénom du patient trouvé",
+                        "age": nombre_age_trouvé,
+                        "pas24": nombre, "pad24": nombre, "pasJour": nombre, "padJour": nombre, "pasNuit": nombre, "padNuit": nombre, "fc": nombre,
                         "loadHigh": false, "validExam": true
                     }
                     Texte : ${textClean}
@@ -487,15 +448,23 @@
                     body: JSON.stringify({ contents: [{ parts: [{ text: promptClinique }] }] })
                 });
 
-                if (!response.ok) throw new Error("Erreur serveur API (" + response.status + ").");
+                if (!response.ok) {
+                    if (response.status === 400 || response.status === 403) {
+                        localStorage.removeItem('geminiApiKeyLocal');
+                        document.getElementById('apiStatus').classList.add('hidden');
+                    }
+                    throw new Error("Erreur serveur API (" + response.status + ").");
+                }
 
                 const responseData = await response.json();
                 let jsonText = responseData.candidates[0].content.parts[0].text;
                 
-                // Nettoyage robuste du JSON
                 jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '');
                 const extractedData = JSON.parse(jsonText.trim());
 
+                // Distribution des données extraites (Identité incluse !)
+                if(extractedData.nomPatient) document.getElementById('nomPatient').value = extractedData.nomPatient;
+                if(extractedData.age) document.getElementById('age').value = extractedData.age;
                 if(extractedData.pas24) document.getElementById('pas24').value = extractedData.pas24;
                 if(extractedData.pad24) document.getElementById('pad24').value = extractedData.pad24;
                 if(extractedData.pasJour) document.getElementById('pasJour').value = extractedData.pasJour;
@@ -503,18 +472,31 @@
                 if(extractedData.pasNuit) document.getElementById('pasNuit').value = extractedData.pasNuit;
                 if(extractedData.padNuit) document.getElementById('padNuit').value = extractedData.padNuit;
                 if(extractedData.fc) document.getElementById('fcInput').value = extractedData.fc;
+                if(extractedData.validExam !== undefined) document.getElementById('critValid').checked = extractedData.validExam;
+                if(extractedData.loadHigh !== undefined) document.getElementById('critCT').value = extractedData.loadHigh ? "Oui" : "Non";
                 
+                // Gestion du flag de fragilité si l'âge est >= 80
+                if(extractedData.age >= 80) document.getElementById('isFrail').checked = true;
+
                 document.getElementById('manualSection').classList.remove('hidden');
-                document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Données traitées !</span>";
+                document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                if (extractedData.pas24 && extractedData.pasJour && extractedData.pasNuit && extractedData.nomPatient) {
+                    await generateAndMergePDF();
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Identité et constantes extraites. Rapport généré avec succès !</span>";
+                } else { 
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ Données lues partiellement. Vérifiez l'identité et complétez les cases vides avant de générer.</span>";
+                }
 
             } catch (err) {
                 console.error(err);
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec IA : " + err.message + ". Passez en manuel.</span>";
+                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec IA : " + err.message + ". Entrez les données manuellement ci-contre.</span>";
                 document.getElementById('manualSection').classList.remove('hidden');
             }
         });
-// ==========================================
-        // VALIDATION GLOBALE & GÉNÉRATION DU PDF EXPERT
+
+        // ==========================================
+        // VALIDATION GLOBALE & GÈNÈRATION DU PDF
         // ==========================================
         function validateAllInputs() {
             const requiredIds = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit'];
@@ -529,12 +511,12 @@
 
         document.getElementById('generateFinalBtn').addEventListener('click', async () => {
             if (!validateAllInputs()) {
-                alert("Veuillez remplir l'identité et les constantes hémodynamiques manquantes (encadrées en rouge).");
+                alert("Veuillez vérifier que l'identité (extraite par l'IA) et les paramètres vasculaires sont complets.");
                 return;
             }
-            document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Génération du compte-rendu expert...</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Création du document d'expertise...</span>";
             await generateAndMergePDF();
-            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Rapport d'expertise généré avec succès !</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Compte-rendu fusionné avec succès !</span>";
         });
 
         async function generateAndMergePDF() {
