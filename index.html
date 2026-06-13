@@ -17,6 +17,16 @@
         .toggle-checkbox:checked + .toggle-label { background-color: #2563EB; }
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
         .toggle-label { width: 3rem; height: 1.5rem; background-color: #cbd5e1; border-radius: 9999px; transition: all 0.3s; }
+        
+        /* CORRECTION UI : Masquer les flèches des inputs number pour gagner de la place */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased locked-app" id="bodyContainer">
@@ -136,20 +146,20 @@
                         <div class="grid grid-cols-3 gap-3 mb-4">
                             <div class="bg-white p-3 rounded-lg border shadow-sm text-center">
                                 <div class="text-xs font-semibold text-slate-500 mb-1">24H (<130/80)</div>
-                                <div class="flex justify-center items-center gap-1">
-                                    <input type="number" id="pas24" class="w-12 border-b border-slate-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="pad24" class="w-12 border-b border-slate-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
+                                <div class="flex justify-center items-center gap-2">
+                                    <input type="number" id="pas24" class="w-16 border-b border-slate-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="pad24" class="w-16 border-b border-slate-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
                             </div>
                             <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 shadow-sm text-center">
                                 <div class="text-xs font-semibold text-yellow-600 mb-1">Jour (<135/85)</div>
-                                <div class="flex justify-center items-center gap-1">
-                                    <input type="number" id="pasJour" class="w-12 border-b border-yellow-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padJour" class="w-12 border-b border-yellow-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
+                                <div class="flex justify-center items-center gap-2">
+                                    <input type="number" id="pasJour" class="w-16 border-b border-yellow-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padJour" class="w-16 border-b border-yellow-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
                             </div>
                             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 shadow-sm text-center">
                                 <div class="text-xs font-semibold text-indigo-600 mb-1">Nuit (<120/70)</div>
-                                <div class="flex justify-center items-center gap-1">
-                                    <input type="number" id="pasNuit" class="w-12 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padNuit" class="w-12 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
+                                <div class="flex justify-center items-center gap-2">
+                                    <input type="number" id="pasNuit" class="w-16 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padNuit" class="w-16 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
                             </div>
                         </div>
@@ -215,7 +225,7 @@
                             
                             <div class="flex items-center gap-3 bg-white p-3 rounded-lg border shadow-sm">
                                 <span class="text-sm font-medium text-slate-700 flex-grow">Fréquence Cardiaque (Moyenne)</span>
-                                <input type="number" id="fcInput" placeholder="bpm" class="w-20 border-b border-slate-300 text-center font-bold text-slate-700 outline-none p-1 bg-transparent focus:border-blue-500 rounded-sm">
+                                <input type="number" id="fcInput" placeholder="bpm" class="w-24 border-b border-slate-300 text-center font-bold text-slate-700 outline-none p-1 bg-transparent focus:border-blue-500 rounded-sm">
                             </div>
 
                             <div class="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
@@ -421,7 +431,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE (AUTO-DÉTECTION INTÉGRALE)
+        // FLUX 2 : EXTRACTION LOCALE (ZONES SÉCURISÉES)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -437,6 +447,7 @@
             let data = {};
             let device = userSelectedDevice;
             
+            // DÉTECTION INTELLIGENTE
             if (device === 'auto') {
                 if (text.includes('DMS-ABP') || text.includes('Ratio Sys Anormal')) {
                     device = 'dms';
@@ -483,12 +494,15 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // FRÉQUENCE CARDIAQUE : RECHERCHE STRICTE DE "Moy"
-                let fcBlock = text.match(/24\s*heures\s*FC/i);
-                if (fcBlock) {
-                    let textAfter = text.substring(fcBlock.index, fcBlock.index + 120);
-                    // \W* autorise les espaces et les ponctuations, MAIS REJETTE les lettres (ce qui élimine "moyenne")
-                    let matchFC = textAfter.match(/Moy\W*(\d{2,3})/);
+                // FRÉQUENCE CARDIAQUE : L'approche par "Zone Sécurisée" (Fermeture de la zone AVANT la tension matinale)
+                let fcIndex = text.search(/24\s*heures\s*FC/i);
+                if (fcIndex !== -1) {
+                    // On isole un bloc de texte de taille raisonnable (300 caractères)
+                    let fcArea = text.substring(fcIndex, fcIndex + 300);
+                    // On le coupe net si on croise un titre de section dangereux (PA tôt le matin ou Rythme circadien)
+                    let safeArea = fcArea.split(/PA\s*tôt|Rythme|Conclusion/i)[0];
+                    // Dans cette zone 100% sûre, on peut prendre librement Moy ou Moyenne suivi d'un chiffre
+                    let matchFC = safeArea.match(/(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
                     if (matchFC) {
                         data.fc = matchFC[1];
                     }
@@ -628,7 +642,7 @@
         });
 
         // ==========================================
-        // GÈNÈRATION DU PDF FINAL ESC 2024 (SÉCURISÉE)
+        // GÈNÈRATION DU PDF FINAL ESC 2024
         // ==========================================
         document.getElementById('generateFinalBtn').addEventListener('click', async () => {
             if (!validateAllInputs()) {
@@ -679,7 +693,6 @@
                     const arrayBuffer = await pdfFile.arrayBuffer();
                     mergedPdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 } catch (error) {
-                    console.warn("Le PDF d'origine est incompatible avec la fusion. Création d'un rapport indépendant.", error);
                     mergedPdf = await PDFDocument.create(); 
                 }
             } else {
