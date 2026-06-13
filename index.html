@@ -421,7 +421,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE (AUTO-DÉTECTION INTÉGRALE)
+        // FLUX 2 : EXTRACTION LOCALE (MOTEUR ANTI-SEUILS)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -437,34 +437,27 @@
             let data = {};
             let device = userSelectedDevice;
             
-            // DÉTECTION INTELLIGENTE DU MATÉRIEL
+            // DÉTECTION INTELLIGENTE
             if (device === 'auto') {
                 if (text.includes('DMS-ABP') || text.includes('Ratio Sys Anormal')) {
                     device = 'dms';
                 } else if (text.includes('Kobe') || text.includes('Seuil BP') || text.includes('24 heures')) {
                     device = 'abpm50';
                 } else {
-                    device = 'abpm50'; // Par défaut
+                    device = 'abpm50'; 
                 }
             }
             
             if (device === 'abpm50') {
-                // EXCTRACTION ABPM50 CORRIGÉE
+                // EXCTRACTION ABPM50: MOTEUR RENFORCÉ
                 
-                // 1. Nom : Ignore "Homme/Femme" et s'arrête strictement sur "Age:", "Âge:", "ID:" ou "N°"
+                // 1. Identité
                 let nomRaw = text.match(/(?:Nom|Patient)\s*:(.*?)(?:N°|N\s*°|\$N|Age\s*:|Âge\s*:|ID\s*:|Kobe|Date|Sexe\s*:)/i);
                 if (nomRaw) {
-                    let n = nomRaw[1]
-                        .replace(/Homme[\s\/\\]*Femme\s*:/i, '')
-                        .replace(/Female|Male/i, '')
-                        .replace(/patient\s*:/i, '')
-                        .replace(/(?:Age|Âge)\s*/i, '') // Sécurité supplémentaire
-                        .replace(/[^A-Za-zÀ-ÿ\s\-]/g, '')
-                        .trim();
+                    let n = nomRaw[1].replace(/Homme[\s\/\\]*Femme\s*:/i, '').replace(/Female|Male/i, '').replace(/patient\s*:/i, '').replace(/(?:Age|Âge)\s*/i, '').replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                     if (n) data.nomPatient = n;
                 }
                 
-                // 2. Age : Cherche "Age:" ou "Âge:", ignore les genres
                 let ageRaw = text.match(/(?:Age|Âge)\s*:?[\s]*(?:Female|Male|Homme|Femme|Sexe)?\s*(\d{2,3})/i);
                 if(ageRaw) {
                     data.age = ageRaw[1];
@@ -473,21 +466,29 @@
                     if(ageFallback) data.age = ageFallback[1];
                 }
                 
-                // 3. Tensions : Force la capture des valeurs IMMÉDIATES après le texte (les moyennes, pas les seuils)
-                let match24 = text.match(/24\s*heures[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
+                // 3. TENSIONS : BLOCAGE DES SEUILS (130/80, 135/85, 120/70)
+                // Cette formule ignore sciemment les chiffres des normes ESC pour isoler la vraie tension du patient
+                let regex24 = /24\s*heures.*?\b(?!(?:130\s*[\/\|\\]\s*80|135\s*[\/\|\\]\s*85|120\s*[\/\|\\]\s*70)\b)(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})\b/i;
+                let match24 = text.match(regex24);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
                 
-                let matchJour = text.match(/Jour[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
+                let regexJour = /Jour.*?\b(?!(?:130\s*[\/\|\\]\s*80|135\s*[\/\|\\]\s*85|120\s*[\/\|\\]\s*70)\b)(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})\b/i;
+                let matchJour = text.match(regexJour);
                 if(matchJour) { data.pasJour = matchJour[1]; data.padJour = matchJour[2]; }
                 
-                let matchNuit = text.match(/Nuit[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
+                let regexNuit = /Nuit.*?\b(?!(?:130\s*[\/\|\\]\s*80|135\s*[\/\|\\]\s*85|120\s*[\/\|\\]\s*70)\b)(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})\b/i;
+                let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // 4. Fréquence Cardiaque : Saute par-dessus "Max" pour isoler "Moy"
-                let matchFC = text.match(/24\s*heures\s*FC.*?(?:Moy|Moyenne)[\s:]*(\d{2,3})/i);
+                // 4. Fréquence Cardiaque : Filtre le mot "Max" pour sauter directement à "Moy"
+                let matchFC = text.match(/24\s*heures\s*FC.*?(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
                 if(matchFC) data.fc = matchFC[1];
                 
-                // 5. Charge
+                // 5. Dipping : Extraction directe depuis le texte si disponible
+                let matchDip = text.match(/Rythme circadien.*?Systole\s*(-?\d+\.?\d*)\s*%/i);
+                if(matchDip) data.dippingSys = parseFloat(matchDip[1]);
+
+                // 6. Charge
                 let matchChargeSys = text.match(/Systole\s*\(\s*.\s*135\s*\)\s*(\d+\.?\d*)%/i);
                 let matchChargeDia = text.match(/Diastole\s*\(\s*.\s*85\s*\)\s*(\d+\.?\d*)%/i);
                 data.loadHigh = false;
@@ -496,7 +497,6 @@
 
             } else if (device === 'dms') {
                 // EXTRACTION DMS
-                // La regex cherche "Age:" ou "ID Patient:" complets pour ne pas couper un nom comme CHRID
                 let nomRaw = text.match(/Nom\s*Patient\s*:(.*?)(?:Age\s*:|ID\s*Patient|Sexe\s*:)/i);
                 if(nomRaw) data.nomPatient = nomRaw[1].replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                 
@@ -546,7 +546,7 @@
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
 
-            // VIDAGE DU CACHE : On efface tout le formulaire avant la nouvelle lecture
+            // VIDAGE DU CACHE : Flush complet du formulaire
             const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
             fieldsToClear.forEach(id => {
                 const el = document.getElementById(id);
