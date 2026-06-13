@@ -421,7 +421,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE (MOTEUR ANTI-SEUILS)
+        // FLUX 2 : EXTRACTION LOCALE (MOTEUR ANTI-SEUILS + FC)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -449,7 +449,7 @@
             }
             
             if (device === 'abpm50') {
-                // EXCTRACTION ABPM50: MOTEUR RENFORCÉ
+                // EXCTRACTION ABPM50
                 
                 // 1. Identité
                 let nomRaw = text.match(/(?:Nom|Patient)\s*:(.*?)(?:N°|N\s*°|\$N|Age\s*:|Âge\s*:|ID\s*:|Kobe|Date|Sexe\s*:)/i);
@@ -466,8 +466,7 @@
                     if(ageFallback) data.age = ageFallback[1];
                 }
                 
-                // 3. TENSIONS : BLOCAGE DES SEUILS (130/80, 135/85, 120/70)
-                // Cette formule ignore sciemment les chiffres des normes ESC pour isoler la vraie tension du patient
+                // 3. TENSIONS : BLOCAGE DES SEUILS
                 let regex24 = /24\s*heures.*?\b(?!(?:130\s*[\/\|\\]\s*80|135\s*[\/\|\\]\s*85|120\s*[\/\|\\]\s*70)\b)(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})\b/i;
                 let match24 = text.match(regex24);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
@@ -480,11 +479,14 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // 4. Fréquence Cardiaque : Filtre le mot "Max" pour sauter directement à "Moy"
-                let matchFC = text.match(/24\s*heures\s*FC.*?(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
-                if(matchFC) data.fc = matchFC[1];
+                // 4. FRÉQUENCE CARDIAQUE : Isolation spatiale (les 120 caractères suivants max) pour bloquer la PA matinale
+                let fcSection = text.match(/24\s*heures\s*FC(.{0,120})/i);
+                if (fcSection) {
+                    let matchFC = fcSection[1].match(/(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
+                    if (matchFC) data.fc = matchFC[1];
+                }
                 
-                // 5. Dipping : Extraction directe depuis le texte si disponible
+                // 5. Dipping
                 let matchDip = text.match(/Rythme circadien.*?Systole\s*(-?\d+\.?\d*)\s*%/i);
                 if(matchDip) data.dippingSys = parseFloat(matchDip[1]);
 
