@@ -97,12 +97,13 @@
                             </h2>
                             <div class="space-y-4">
                                 <label class="block text-sm font-medium text-slate-600 text-left mb-1">Modèle d'appareil MAPA</label>
-                                <select id="deviceModel" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
-                                    <option value="abpm50">ABPM50 / Appareils standard</option>
-                                    <option value="dms">DMS-ABP</option>
+                                <select id="deviceModel" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 bg-purple-50 text-sm font-semibold text-purple-800">
+                                    <option value="auto">🤖 Détection Automatique (Recommandé)</option>
+                                    <option value="abpm50">Forcer : ABPM50</option>
+                                    <option value="dms">Forcer : DMS-ABP</option>
                                 </select>
                                 
-                                <label class="block text-sm font-medium text-slate-600 text-left mb-1">Importer le fichier PDF du rapport</label>
+                                <label class="block text-sm font-medium text-slate-600 text-left mb-1 mt-4">Importer le fichier PDF du rapport</label>
                                 <input type="file" id="pdfUpload" accept="application/pdf" class="w-full border border-slate-300 rounded-lg p-2 bg-white cursor-pointer text-sm">
                                 
                                 <div class="flex flex-col gap-3 mt-6">
@@ -420,7 +421,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE AUTOMATIQUE (AVEC FLUSH)
+        // FLUX 2 : EXTRACTION LOCALE (AUTO-DÉTECTION INVINCIBLE)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -432,44 +433,67 @@
             }
         });
 
-        function extractMAPADataLocally(text, device) {
+        function extractMAPADataLocally(text, userSelectedDevice) {
             let data = {};
+            let device = userSelectedDevice;
+            
+            // LOGIQUE D'AUTO-DÉTECTION DU MATÉRIEL
+            if (device === 'auto') {
+                if (text.includes('DMS-ABP') || text.includes('Ratio Sys Anormal')) {
+                    device = 'dms';
+                } else if (text.includes('Kobe') || text.includes('Seuil BP') || text.includes('24 heures')) {
+                    device = 'abpm50';
+                } else {
+                    device = 'abpm50'; // Par défaut si on doute
+                }
+            }
             
             if (device === 'abpm50') {
-                // MODIFICATION 1 : Tolère les symboles spéciaux du ABPM50 comme $N, N°, Homme/Femme
-                let nRaw = text.match(/(?:Homme\/?\s*Femme:|Nom:)\s*([A-Za-zÀ-ÿ\s\-]+?)\s*(?:\$N|N°|Age|ID|Kobe|Date)/i);
-                if (nRaw && nRaw[1]) {
-                    let n = nRaw[1].replace(/Nom:/i, '').replace(/Homme/gi, '').replace(/Femme/gi, '').replace(/Male/gi, '').replace(/Female/gi, '').replace(/[\/:]/g, '').trim();
+                // EXCTRACTION ABPM50 BLINDÉE
+                
+                // 1. Nom : Prend tout entre Nom: et le premier repère parasite (N°, Age, Kobe)
+                let nomRaw = text.match(/Nom\s*:(.*?)(?:N°|\$N|Age|ID|Kobe|Date)/i);
+                if (nomRaw) {
+                    // Nettoyage radical des mots anglais/français incrustés
+                    let n = nomRaw[1].replace(/Homme[\s\/\\]*Femme\s*:/i, '').replace(/Female|Male/i, '').replace(/patient\s*:/i, '').replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                     if (n) data.nomPatient = n;
                 }
                 
-                let ageRaw = text.match(/Age:.*?(?:Female|Male|Homme|Femme|Sexe)?\s*(\d{2,3})/i);
-                if(ageRaw) data.age = ageRaw[1];
+                // 2. Age : Cherche Age: puis filtre tout ce qui n'est pas chiffre
+                let ageRaw = text.match(/Age\s*:(.*?)(?:Kobe|\$N|N°|ID|Date)/i);
+                if (ageRaw) {
+                    let a = ageRaw[1].replace(/[^0-9]/g, '');
+                    if (a) data.age = a;
+                }
                 
-                let match24 = text.match(/24 heures\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
+                // 3. Tensions
+                let match24 = text.match(/24\s*heures[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
                 
-                let matchJour = text.match(/Jour\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
+                let matchJour = text.match(/Jour[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
                 if(matchJour) { data.pasJour = matchJour[1]; data.padJour = matchJour[2]; }
                 
-                let matchNuit = text.match(/Nuit\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
+                let matchNuit = text.match(/Nuit[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                let matchFC = text.match(/24 heures FC.*?Moy\s*(\d+)/i);
+                // 4. Fréquence Cardiaque
+                let matchFC = text.match(/24\s*heures\s*FC.*?Moy\s*(\d{2,3})/i);
                 if(matchFC) data.fc = matchFC[1];
                 
-                let matchChargeSys = text.match(/Systole\s*\(\s*.\s*135\s*\)\s*(\d+\.?\d*)%/i);
-                let matchChargeDia = text.match(/Diastole\s*\(\s*.\s*85\s*\)\s*(\d+\.?\d*)%/i);
+                // 5. Charge
+                let matchChargeSys = text.match(/Systole[^\d]*135[^\d]*(\d+\.?\d*)%/i);
+                let matchChargeDia = text.match(/Diastole[^\d]*85[^\d]*(\d+\.?\d*)%/i);
                 data.loadHigh = false;
                 if(matchChargeSys && parseFloat(matchChargeSys[1]) > 40) data.loadHigh = true;
                 if(matchChargeDia && parseFloat(matchChargeDia[1]) > 40) data.loadHigh = true;
 
             } else if (device === 'dms') {
-                let matchNom = text.match(/Nom Patient:\s*([A-Za-z\s]+?)\s*(?:Age|ID|Sexe)/i);
-                if(matchNom) data.nomPatient = matchNom[1].trim();
+                // EXTRACTION DMS BLINDÉE
+                let nomRaw = text.match(/Nom\s*Patient\s*:(.*?)(?:Age|ID|Sexe)/i);
+                if(nomRaw) data.nomPatient = nomRaw[1].replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                 
-                let matchAge = text.match(/Age:\s*(\d{2,3})/i);
-                if(matchAge) data.age = matchAge[1];
+                let ageRaw = text.match(/Age\s*:(.*?)(?:Sexe|Taille|Poids|ID)/i);
+                if(ageRaw) data.age = ageRaw[1].replace(/[^0-9]/g, '');
                 
                 let idxTout = text.indexOf("Tout");
                 let idxJour = text.indexOf("Jour (");
@@ -514,24 +538,16 @@
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
 
-            // MODIFICATION 2 : Vidage explicite du cache formulaire à chaque nouveau clic (Flush)
+            // VIDAGE DU CACHE : On efface tout le formulaire avant la nouvelle lecture
             const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
             fieldsToClear.forEach(id => {
                 const el = document.getElementById(id);
-                if(el) {
-                    el.value = '';
-                    el.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
-                }
+                if(el) { el.value = ''; el.classList.remove('border-red-500', 'ring-1', 'ring-red-500'); }
             });
             document.getElementById('isFrail').checked = false;
             document.getElementById('critValid').checked = true;
-            document.getElementById('profilDipping').selectedIndex = 0;
-            document.getElementById('critCT').selectedIndex = 0;
-            document.getElementById('critBlouse').selectedIndex = 0;
-            document.getElementById('critPPM').selectedIndex = 0;
-            document.getElementById('critVar').selectedIndex = 0;
             
-            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>⚙️ Extraction locale des données en cours...</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>⚙️ Auto-détection et extraction locale en cours...</span>";
             
             try {
                 const arrayBuffer = await file.arrayBuffer();
@@ -546,6 +562,8 @@
                 }
 
                 const textClean = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
+                
+                // Appel du moteur qui devinera tout seul l'appareil et lira le texte
                 const extractedData = extractMAPADataLocally(textClean, deviceModel);
 
                 if(extractedData.nomPatient) document.getElementById('nomPatient').value = extractedData.nomPatient;
