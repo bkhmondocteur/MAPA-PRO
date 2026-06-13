@@ -484,10 +484,16 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // 4. FRÉQUENCE CARDIAQUE : Recherche exclusive du premier mot "Moy" suivi d'un chiffre après le bloc FC
-                let matchFC = text.match(/24\s*heures\s*FC[\s\S]*?\bMoy\b\s*(\d{2,3})/i);
-                if (matchFC) {
-                    data.fc = matchFC[1];
+                // 4. FRÉQUENCE CARDIAQUE : Isolement strict avec tolérance de ponctuation parasite
+                let fcBlock = text.match(/24\s*heures\s*FC/i);
+                if (fcBlock) {
+                    // On verrouille la recherche sur les 150 caractères qui suivent directement
+                    let textAfter = text.substring(fcBlock.index, fcBlock.index + 150);
+                    // On repère "Moy" ou "Moyenne", on ignore les ponctuations ou espaces, et on aspire les 2-3 chiffres
+                    let matchFC = textAfter.match(/(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
+                    if (matchFC) {
+                        data.fc = matchFC[1];
+                    }
                 }
                 
                 // 5. Dipping
