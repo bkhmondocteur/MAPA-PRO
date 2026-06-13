@@ -421,7 +421,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE (MOTEUR ANTI-SEUILS + FC)
+        // FLUX 2 : EXTRACTION LOCALE (AUTO-DÉTECTION INTÉGRALE)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -454,7 +454,13 @@
                 // 1. Identité
                 let nomRaw = text.match(/(?:Nom|Patient)\s*:(.*?)(?:N°|N\s*°|\$N|Age\s*:|Âge\s*:|ID\s*:|Kobe|Date|Sexe\s*:)/i);
                 if (nomRaw) {
-                    let n = nomRaw[1].replace(/Homme[\s\/\\]*Femme\s*:/i, '').replace(/Female|Male/i, '').replace(/patient\s*:/i, '').replace(/(?:Age|Âge)\s*/i, '').replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
+                    let n = nomRaw[1]
+                        .replace(/Homme[\s\/\\]*Femme\s*:/i, '')
+                        .replace(/Female|Male/i, '')
+                        .replace(/patient\s*:/i, '')
+                        .replace(/(?:Age|Âge)\s*/i, '')
+                        .replace(/[^A-Za-zÀ-ÿ\s\-]/g, '')
+                        .trim();
                     if (n) data.nomPatient = n;
                 }
                 
@@ -479,11 +485,16 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // 4. FRÉQUENCE CARDIAQUE : Isolation spatiale (les 120 caractères suivants max) pour bloquer la PA matinale
-                let fcSection = text.match(/24\s*heures\s*FC(.{0,120})/i);
-                if (fcSection) {
-                    let matchFC = fcSection[1].match(/(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
-                    if (matchFC) data.fc = matchFC[1];
+                // 4. FRÉQUENCE CARDIAQUE : Logique stricte suggérée (Isolement)
+                let fcBlock = text.match(/24\s*heures\s*FC/i);
+                if (fcBlock) {
+                    // On ne regarde que les 100 caractères qui suivent directement "24 heures FC"
+                    let textAfter = text.substring(fcBlock.index, fcBlock.index + 100);
+                    // On cherche le mot exact "Moy", on rejette formellement "moyenne" (pour ignorer le pic matinal)
+                    let matchFC = textAfter.match(/\bMoy\b[^\d]*(\d{2,3})/i);
+                    if (matchFC) {
+                        data.fc = matchFC[1];
+                    }
                 }
                 
                 // 5. Dipping
@@ -548,7 +559,7 @@
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
 
-            // VIDAGE DU CACHE : Flush complet du formulaire
+            // VIDAGE DU CACHE
             const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
             fieldsToClear.forEach(id => {
                 const el = document.getElementById(id);
