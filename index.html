@@ -437,7 +437,6 @@
             let data = {};
             let device = userSelectedDevice;
             
-            // DÉTECTION INTELLIGENTE
             if (device === 'auto') {
                 if (text.includes('DMS-ABP') || text.includes('Ratio Sys Anormal')) {
                     device = 'dms';
@@ -485,16 +484,10 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // 4. FRÉQUENCE CARDIAQUE : Logique stricte suggérée (Isolement)
-                let fcBlock = text.match(/24\s*heures\s*FC/i);
-                if (fcBlock) {
-                    // On ne regarde que les 100 caractères qui suivent directement "24 heures FC"
-                    let textAfter = text.substring(fcBlock.index, fcBlock.index + 100);
-                    // On cherche le mot exact "Moy", on rejette formellement "moyenne" (pour ignorer le pic matinal)
-                    let matchFC = textAfter.match(/\bMoy\b[^\d]*(\d{2,3})/i);
-                    if (matchFC) {
-                        data.fc = matchFC[1];
-                    }
+                // 4. FRÉQUENCE CARDIAQUE : Recherche exclusive du premier mot "Moy" suivi d'un chiffre après le bloc FC
+                let matchFC = text.match(/24\s*heures\s*FC[\s\S]*?\bMoy\b\s*(\d{2,3})/i);
+                if (matchFC) {
+                    data.fc = matchFC[1];
                 }
                 
                 // 5. Dipping
@@ -559,7 +552,7 @@
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
 
-            // VIDAGE DU CACHE
+            // VIDAGE DU CACHE : Flush complet du formulaire
             const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
             fieldsToClear.forEach(id => {
                 const el = document.getElementById(id);
