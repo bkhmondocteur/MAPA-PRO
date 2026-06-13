@@ -420,7 +420,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE AUTOMATIQUE (REGEX AMÉLIORÉES)
+        // FLUX 2 : EXTRACTION LOCALE AUTOMATIQUE (AVEC FLUSH)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -436,14 +436,15 @@
             let data = {};
             
             if (device === 'abpm50') {
-                let nomRaw = text.match(/Nom:\s*(.*?)(?:N°|Age|ID|Kobe|Date)/i);
-                if (nomRaw) {
-                    let n = nomRaw[1].replace(/Homme\/?/i, '').replace(/Femme:?/i, '').replace(/Female|Male/i, '').trim();
+                // MODIFICATION 1 : Tolère les symboles spéciaux du ABPM50 comme $N, N°, Homme/Femme
+                let nRaw = text.match(/(?:Homme\/?\s*Femme:|Nom:)\s*([A-Za-zÀ-ÿ\s\-]+?)\s*(?:\$N|N°|Age|ID|Kobe|Date)/i);
+                if (nRaw && nRaw[1]) {
+                    let n = nRaw[1].replace(/Nom:/i, '').replace(/Homme/gi, '').replace(/Femme/gi, '').replace(/Male/gi, '').replace(/Female/gi, '').replace(/[\/:]/g, '').trim();
                     if (n) data.nomPatient = n;
                 }
                 
-                let matchAge = text.match(/Age:.*?(?:Female|Male|Homme|Femme|Sexe)?\s*(\d{2,3})/i);
-                if(matchAge) data.age = matchAge[1];
+                let ageRaw = text.match(/Age:.*?(?:Female|Male|Homme|Femme|Sexe)?\s*(\d{2,3})/i);
+                if(ageRaw) data.age = ageRaw[1];
                 
                 let match24 = text.match(/24 heures\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
@@ -512,6 +513,23 @@
             const file = pdfUpload.files[0];
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
+
+            // MODIFICATION 2 : Vidage explicite du cache formulaire à chaque nouveau clic (Flush)
+            const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
+            fieldsToClear.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.value = '';
+                    el.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+                }
+            });
+            document.getElementById('isFrail').checked = false;
+            document.getElementById('critValid').checked = true;
+            document.getElementById('profilDipping').selectedIndex = 0;
+            document.getElementById('critCT').selectedIndex = 0;
+            document.getElementById('critBlouse').selectedIndex = 0;
+            document.getElementById('critPPM').selectedIndex = 0;
+            document.getElementById('critVar').selectedIndex = 0;
             
             document.getElementById('statusMsg').innerHTML = "<span class='text-purple-600 font-bold'>⚙️ Extraction locale des données en cours...</span>";
             
@@ -624,15 +642,13 @@
             
             let mergedPdf;
             
-            // BOUCLIER DE SÉCURITÉ POUR LES VIEUX PDF (DMS-ABP)
             if (pdfFile) {
                 try {
                     const arrayBuffer = await pdfFile.arrayBuffer();
-                    // On force l'ouverture même si la structure interne est complexe
                     mergedPdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 } catch (error) {
                     console.warn("Le PDF d'origine est incompatible avec la fusion. Création d'un rapport indépendant.", error);
-                    mergedPdf = await PDFDocument.create(); // On crée un PDF vierge pour ne pas bloquer l'utilisateur
+                    mergedPdf = await PDFDocument.create(); 
                 }
             } else {
                 mergedPdf = await PDFDocument.create();
