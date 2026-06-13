@@ -18,15 +18,13 @@
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
         .toggle-label { width: 3rem; height: 1.5rem; background-color: #cbd5e1; border-radius: 9999px; transition: all 0.3s; }
         
-        /* CORRECTION UI : Masquer les flèches des inputs number pour gagner de la place */
+        /* Masquer les flèches des champs numériques pour un affichage plus propre */
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
             margin: 0; 
         }
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
+        input[type="number"] { -moz-appearance: textfield; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans antialiased locked-app" id="bodyContainer">
@@ -132,7 +130,7 @@
                     <div id="manualSection" class="hidden bg-slate-50 p-6 rounded-xl border border-slate-200 shadow-inner flex flex-col h-full">
                         <h3 class="text-md font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Données d'évaluation clinique</h3>
                         
-                        <div class="grid grid-cols-2 gap-3 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                             <div class="bg-white p-3 rounded-lg border shadow-sm">
                                 <label class="block text-xs font-medium text-slate-500 mb-1">Nom & Prénom Patient</label>
                                 <input type="text" id="nomPatient" class="w-full text-sm font-bold text-slate-700 bg-transparent outline-none border-b border-transparent focus:border-blue-500 p-0 rounded-sm">
@@ -143,28 +141,28 @@
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                             <div class="bg-white p-3 rounded-lg border shadow-sm text-center">
                                 <div class="text-xs font-semibold text-slate-500 mb-1">24H (<130/80)</div>
-                                <div class="flex justify-center items-center gap-2">
+                                <div class="flex justify-center items-center gap-1">
                                     <input type="number" id="pas24" class="w-16 border-b border-slate-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="pad24" class="w-16 border-b border-slate-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
                             </div>
                             <div class="bg-yellow-50 p-3 rounded-lg border border-yellow-100 shadow-sm text-center">
                                 <div class="text-xs font-semibold text-yellow-600 mb-1">Jour (<135/85)</div>
-                                <div class="flex justify-center items-center gap-2">
+                                <div class="flex justify-center items-center gap-1">
                                     <input type="number" id="pasJour" class="w-16 border-b border-yellow-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padJour" class="w-16 border-b border-yellow-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
                             </div>
                             <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 shadow-sm text-center">
                                 <div class="text-xs font-semibold text-indigo-600 mb-1">Nuit (<120/70)</div>
-                                <div class="flex justify-center items-center gap-2">
+                                <div class="flex justify-center items-center gap-1">
                                     <input type="number" id="pasNuit" class="w-16 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500"><span class="text-slate-400">/</span><input type="number" id="padNuit" class="w-16 border-b border-indigo-300 text-center font-bold text-slate-700 bg-transparent outline-none p-0 rounded-sm focus:border-blue-500">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
                             <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 shadow-sm">
                                 <label class="block text-xs font-semibold text-purple-700 mb-1">Dipping Systolique (%)</label>
                                 <input type="number" step="0.1" id="dipSys" class="w-full text-sm font-bold text-slate-700 bg-transparent outline-none border-b border-purple-300 focus:border-purple-500 p-0 rounded-sm">
@@ -192,7 +190,7 @@
                                 </div>
                             </div>
 
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div class="flex flex-col justify-center bg-white p-3 rounded-lg border shadow-sm">
                                     <span class="text-xs font-medium text-slate-500 mb-2">Charge Tension > 40%</span>
                                     <select id="critCT" class="w-full text-sm border-slate-300 rounded p-1 outline-none font-semibold text-slate-700">
@@ -225,7 +223,7 @@
                             
                             <div class="flex items-center gap-3 bg-white p-3 rounded-lg border shadow-sm">
                                 <span class="text-sm font-medium text-slate-700 flex-grow">Fréquence Cardiaque (Moyenne)</span>
-                                <input type="number" id="fcInput" placeholder="bpm" class="w-24 border-b border-slate-300 text-center font-bold text-slate-700 outline-none p-1 bg-transparent focus:border-blue-500 rounded-sm">
+                                <input type="number" id="fcInput" placeholder="bpm" class="w-20 border-b border-slate-300 text-center font-bold text-slate-700 outline-none p-1 bg-transparent focus:border-blue-500 rounded-sm">
                             </div>
 
                             <div class="flex items-center justify-between bg-white p-3 rounded-lg border shadow-sm">
@@ -431,7 +429,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE (ZONES SÉCURISÉES)
+        // FLUX 2 : EXTRACTION LOCALE (AUTO-DÉTECTION INTÉGRALE)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -481,7 +479,7 @@
                     if(ageFallback) data.age = ageFallback[1];
                 }
                 
-                // TENSIONS
+                // TENSIONS : BLOCAGE DES SEUILS
                 let regex24 = /24\s*heures.*?\b(?!(?:130\s*[\/\|\\]\s*80|135\s*[\/\|\\]\s*85|120\s*[\/\|\\]\s*70)\b)(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})\b/i;
                 let match24 = text.match(regex24);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
@@ -494,15 +492,14 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // FRÉQUENCE CARDIAQUE : L'approche par "Zone Sécurisée" (Fermeture de la zone AVANT la tension matinale)
+                // 4. FRÉQUENCE CARDIAQUE : Application stricte de la règle absolue
                 let fcIndex = text.search(/24\s*heures\s*FC/i);
                 if (fcIndex !== -1) {
-                    // On isole un bloc de texte de taille raisonnable (300 caractères)
-                    let fcArea = text.substring(fcIndex, fcIndex + 300);
-                    // On le coupe net si on croise un titre de section dangereux (PA tôt le matin ou Rythme circadien)
-                    let safeArea = fcArea.split(/PA\s*tôt|Rythme|Conclusion/i)[0];
-                    // Dans cette zone 100% sûre, on peut prendre librement Moy ou Moyenne suivi d'un chiffre
-                    let matchFC = safeArea.match(/(?:Moy|Moyenne)[^\d]*(\d{2,3})/i);
+                    // On isole un petit bloc pour chercher sans déborder
+                    let textAfter = text.substring(fcIndex, fcIndex + 200);
+                    // On cherche STRICTEMENT le mot "Moy" avec ses frontières de mots (\b).
+                    // On accepte des symboles entre Moy et les chiffres, mais on REJETTE le mot "moyenne"
+                    let matchFC = textAfter.match(/\bmoy\b[^\dA-Za-z]*(\d{2,3})/i);
                     if (matchFC) {
                         data.fc = matchFC[1];
                     }
@@ -518,6 +515,7 @@
                 if(matchChargeDia && parseFloat(matchChargeDia[1]) > 40) data.loadHigh = true;
 
             } else if (device === 'dms') {
+                // EXTRACTION DMS
                 let nomRaw = text.match(/Nom\s*Patient\s*:(.*?)(?:Age\s*:|ID\s*Patient|Sexe\s*:)/i);
                 if(nomRaw) data.nomPatient = nomRaw[1].replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                 
@@ -567,7 +565,7 @@
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
 
-            // VIDAGE DU CACHE
+            // VIDAGE DU CACHE : Flush complet du formulaire
             const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
             fieldsToClear.forEach(id => {
                 const el = document.getElementById(id);
@@ -693,6 +691,7 @@
                     const arrayBuffer = await pdfFile.arrayBuffer();
                     mergedPdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 } catch (error) {
+                    console.warn("Le PDF d'origine est incompatible avec la fusion. Création d'un rapport indépendant.", error);
                     mergedPdf = await PDFDocument.create(); 
                 }
             } else {
