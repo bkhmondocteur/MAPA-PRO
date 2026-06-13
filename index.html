@@ -420,7 +420,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE AUTOMATIQUE (REGEX)
+        // FLUX 2 : EXTRACTION LOCALE AUTOMATIQUE (REGEX AMÉLIORÉES)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -436,57 +436,64 @@
             let data = {};
             
             if (device === 'abpm50') {
-                let matchNom = text.match(/Nom:\s*([^0-9]+?)\s+(?:Homme|Female|Femme|Age|N°)/i);
-                if(matchNom) data.nomPatient = matchNom[1].trim();
-                let matchAge = text.match(/Age:\s*(\d+)/i);
+                let nomRaw = text.match(/Nom:\s*(.*?)(?:N°|Age|ID|Kobe|Date)/i);
+                if (nomRaw) {
+                    let n = nomRaw[1].replace(/Homme\/?/i, '').replace(/Femme:?/i, '').replace(/Female|Male/i, '').trim();
+                    if (n) data.nomPatient = n;
+                }
+                
+                let matchAge = text.match(/Age:.*?(?:Female|Male|Homme|Femme|Sexe)?\s*(\d{2,3})/i);
                 if(matchAge) data.age = matchAge[1];
                 
-                let match24 = text.match(/24 heures\s*(\d{2,3})\/(\d{2,3})/i);
+                let match24 = text.match(/24 heures\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
-                let matchJour = text.match(/Jour\s*(\d{2,3})\/(\d{2,3})/i);
+                
+                let matchJour = text.match(/Jour\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
                 if(matchJour) { data.pasJour = matchJour[1]; data.padJour = matchJour[2]; }
-                let matchNuit = text.match(/Nuit\s*(\d{2,3})\/(\d{2,3})/i);
+                
+                let matchNuit = text.match(/Nuit\s*(\d{2,3})\s*\/\s*(\d{2,3})/i);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
                 let matchFC = text.match(/24 heures FC.*?Moy\s*(\d+)/i);
                 if(matchFC) data.fc = matchFC[1];
                 
-                let matchChargeSys = text.match(/Systole\s*\(.135\)\s*(\d+\.?\d*)%/i);
-                let matchChargeDia = text.match(/Diastole\s*\(.85\)\s*(\d+\.?\d*)%/i);
+                let matchChargeSys = text.match(/Systole\s*\(\s*.\s*135\s*\)\s*(\d+\.?\d*)%/i);
+                let matchChargeDia = text.match(/Diastole\s*\(\s*.\s*85\s*\)\s*(\d+\.?\d*)%/i);
                 data.loadHigh = false;
                 if(matchChargeSys && parseFloat(matchChargeSys[1]) > 40) data.loadHigh = true;
                 if(matchChargeDia && parseFloat(matchChargeDia[1]) > 40) data.loadHigh = true;
 
             } else if (device === 'dms') {
-                let matchNom = text.match(/Nom Patient:\s*([^0-9]+?)\s+(?:Age|ID)/i);
+                let matchNom = text.match(/Nom Patient:\s*([A-Za-z\s]+?)\s*(?:Age|ID|Sexe)/i);
                 if(matchNom) data.nomPatient = matchNom[1].trim();
-                let matchAge = text.match(/Age:\s*(\d+)/i);
+                
+                let matchAge = text.match(/Age:\s*(\d{2,3})/i);
                 if(matchAge) data.age = matchAge[1];
                 
                 let idxTout = text.indexOf("Tout");
                 let idxJour = text.indexOf("Jour (");
                 let idxNuit = text.indexOf("Nuit (");
                 
+                const regexMoy = /Moy:\s*(\d{2,3})\s*(?:\([^)]+\)\s*)*(\d{2,3})/;
+
                 if(idxTout > -1 && idxJour > -1) {
                     let strTout = text.substring(idxTout, idxJour);
-                    let mTout = strTout.match(/Moy:\s*(\d+).*?<130\)\s*(\d+).*?<80\)\s*(\d+)/);
-                    if(mTout) { data.pas24 = mTout[1]; data.pad24 = mTout[2]; data.fc = mTout[3]; }
-                    else {
-                        let fallback = strTout.match(/Moy:\s*(\d{2,3})[^\d]+(\d{2,3})/);
-                        if(fallback) { data.pas24 = fallback[1]; data.pad24 = fallback[2]; }
-                    }
+                    let mTout = strTout.match(regexMoy);
+                    if(mTout) { data.pas24 = mTout[1]; data.pad24 = mTout[2]; }
+                    let fcMatch = strTout.match(/Moy:.*?<80\)\s*(\d{2,3})/);
+                    if(fcMatch) data.fc = fcMatch[1];
                 }
                 
                 if(idxJour > -1 && idxNuit > -1) {
                     let strJour = text.substring(idxJour, idxNuit);
-                    let mJour = strJour.match(/Moy:\s*(\d+).*?(\d+)/);
+                    let mJour = strJour.match(regexMoy);
                     if(mJour) { data.pasJour = mJour[1]; data.padJour = mJour[2]; }
                 }
                 
                 if(idxNuit > -1) {
-                    let strNuit = text.substring(idxNuit, text.indexOf("Systole(mmgh)", idxNuit));
-                    if(strNuit === "") strNuit = text.substring(idxNuit, idxNuit + 500);
-                    let mNuit = strNuit.match(/Moy:\s*(\d+).*?(\d+)/);
+                    let strNuit = text.substring(idxNuit, text.indexOf("Systole", idxNuit));
+                    if(!strNuit || strNuit.length < 20) strNuit = text.substring(idxNuit, idxNuit + 600);
+                    let mNuit = strNuit.match(regexMoy);
                     if(mNuit) { data.pasNuit = mNuit[1]; data.padNuit = mNuit[2]; }
                 }
                 
@@ -521,7 +528,6 @@
                 }
 
                 const textClean = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
-                
                 const extractedData = extractMAPADataLocally(textClean, deviceModel);
 
                 if(extractedData.nomPatient) document.getElementById('nomPatient').value = extractedData.nomPatient;
@@ -557,25 +563,22 @@
                 if (validateAllInputs()) {
                     document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Extraction locale réussie ! Vérifiez les données et générez le rapport.</span>";
                 } else { 
-                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ Données partielles. Veuillez compléter les cases en rouge.</span>";
+                    document.getElementById('statusMsg').innerHTML = "<span class='text-amber-600 font-bold'>⚠️ Données lues partiellement. Veuillez compléter les cases en rouge.</span>";
                 }
 
             } catch (err) {
                 console.error("Erreur d'extraction locale :", err);
                 let errorMessage = "Échec de la lecture du fichier.";
-                
-                // Gestion spécifique de l'erreur d'image non lisible (Pas d'OCR)
                 if (err.message && err.message.includes("SOI not found")) {
-                    errorMessage = "Le fichier PDF contient une image illisible ou est un scan sans texte (Pas d'OCR).";
+                    errorMessage = "Le fichier PDF contient une image illisible ou est un scan sans texte.";
                 }
-                
-                document.getElementById('statusMsg').innerHTML = `<span class='text-red-500 font-bold'>${errorMessage} Saisissez les données manuellement.</span>`;
+                document.getElementById('statusMsg').innerHTML = `<span class='text-red-500 font-bold'>${errorMessage} Veuillez saisir les données manuellement.</span>`;
                 document.getElementById('manualSection').classList.remove('hidden');
             }
         });
 
         // ==========================================
-        // GÈNÈRATION DU PDF FINAL
+        // GÈNÈRATION DU PDF FINAL ESC 2024 (SÉCURISÉE)
         // ==========================================
         document.getElementById('generateFinalBtn').addEventListener('click', async () => {
             if (!validateAllInputs()) {
@@ -584,7 +587,7 @@
             }
             document.getElementById('statusMsg').innerHTML = "<span class='text-blue-600 font-bold'>Création du document d'expertise...</span>";
             await generateAndMergePDF();
-            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Compte-rendu fusionné avec succès !</span>";
+            document.getElementById('statusMsg').innerHTML = "<span class='text-green-600 font-bold'>✅ Compte-rendu généré avec succès !</span>";
         });
 
         async function generateAndMergePDF() {
@@ -618,7 +621,22 @@
 
             const { PDFDocument, rgb, StandardFonts } = PDFLib;
             const pdfFile = document.getElementById('pdfUpload').files[0];
-            let mergedPdf = pdfFile ? await PDFDocument.load(await pdfFile.arrayBuffer()) : await PDFDocument.create();
+            
+            let mergedPdf;
+            
+            // BOUCLIER DE SÉCURITÉ POUR LES VIEUX PDF (DMS-ABP)
+            if (pdfFile) {
+                try {
+                    const arrayBuffer = await pdfFile.arrayBuffer();
+                    // On force l'ouverture même si la structure interne est complexe
+                    mergedPdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+                } catch (error) {
+                    console.warn("Le PDF d'origine est incompatible avec la fusion. Création d'un rapport indépendant.", error);
+                    mergedPdf = await PDFDocument.create(); // On crée un PDF vierge pour ne pas bloquer l'utilisateur
+                }
+            } else {
+                mergedPdf = await PDFDocument.create();
+            }
             
             const synthDoc = await PDFDocument.create();
             const page = synthDoc.addPage([595.28, 841.89]); 
