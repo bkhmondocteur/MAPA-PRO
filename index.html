@@ -18,7 +18,7 @@
         .toggle-checkbox { right: 0; z-index: 1; border-color: #e2e8f0; transition: all 0.3s; }
         .toggle-label { width: 3rem; height: 1.5rem; background-color: #cbd5e1; border-radius: 9999px; transition: all 0.3s; }
         
-        /* Masquer les flèches des champs numériques pour un affichage plus propre */
+        /* Masquer les flèches des champs numériques pour un affichage plus propre sur mobile */
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { 
             -webkit-appearance: none; 
@@ -429,7 +429,7 @@
         });
 
         // ==========================================
-        // FLUX 2 : EXTRACTION LOCALE (MOTEUR CIBLÉ)
+        // FLUX 2 : EXTRACTION LOCALE (AUTO-DÉTECTION INTÉGRALE)
         // ==========================================
         const pdfUpload = document.getElementById('pdfUpload');
         const btnAuto = document.getElementById('btnAuto');
@@ -445,6 +445,7 @@
             let data = {};
             let device = userSelectedDevice;
             
+            // DÉTECTION INTELLIGENTE
             if (device === 'auto') {
                 if (text.includes('DMS-ABP') || text.includes('Ratio Sys Anormal')) {
                     device = 'dms';
@@ -456,6 +457,7 @@
             }
             
             if (device === 'abpm50') {
+                // EXCTRACTION ABPM50
                 
                 let nomRaw = text.match(/(?:Nom|Patient)\s*:(.*?)(?:N°|N\s*°|\$N|Age\s*:|Âge\s*:|ID\s*:|Kobe|Date|Sexe\s*:)/i);
                 if (nomRaw) {
@@ -477,6 +479,7 @@
                     if(ageFallback) data.age = ageFallback[1];
                 }
                 
+                // TENSIONS : BLOCAGE DES SEUILS
                 let regex24 = /24\s*heures.*?\b(?!(?:130\s*[\/\|\\]\s*80|135\s*[\/\|\\]\s*85|120\s*[\/\|\\]\s*70)\b)(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})\b/i;
                 let match24 = text.match(regex24);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
@@ -489,9 +492,10 @@
                 let matchNuit = text.match(regexNuit);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // 4. FRÉQUENCE CARDIAQUE : MOTEUR CIBLÉ
-                // Il trouve le point de départ, avance un peu, s'arrête sur Moy, aspire ce qui n'est pas un chiffre, et capture le chiffre.
-                let matchFC = text.match(/24\s*(?:heures|h)\s*FC.{0,150}?Moy[^\d]*(\d{2,3})/i);
+                // 4. FRÉQUENCE CARDIAQUE : MOTEUR CIBLÉ "PROXIMITÉ"
+                // On cherche "24 heures FC" et on prend le TOUT PREMIER "Moy" ou "Moyenne" qui suit juste après (dans une limite de 150 caractères pour éviter de dériver).
+                let fcRegex = /24\s*(?:heures|h)\s*FC[\s\S]{0,150}?(?:Moy|Moyenne|Moyen)[^\d]*(\d{2,3})/i;
+                let matchFC = text.match(fcRegex);
                 if (matchFC) {
                     data.fc = matchFC[1];
                 }
@@ -506,6 +510,7 @@
                 if(matchChargeDia && parseFloat(matchChargeDia[1]) > 40) data.loadHigh = true;
 
             } else if (device === 'dms') {
+                // EXTRACTION DMS
                 let nomRaw = text.match(/Nom\s*Patient\s*:(.*?)(?:Age\s*:|ID\s*Patient|Sexe\s*:)/i);
                 if(nomRaw) data.nomPatient = nomRaw[1].replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                 
@@ -555,6 +560,7 @@
             const deviceModel = document.getElementById('deviceModel').value;
             if (!file) return;
 
+            // VIDAGE DU CACHE : Flush complet du formulaire
             const fieldsToClear = ['nomPatient', 'age', 'pas24', 'pad24', 'pasJour', 'padJour', 'pasNuit', 'padNuit', 'dipSys', 'fcInput'];
             fieldsToClear.forEach(id => {
                 const el = document.getElementById(id);
@@ -680,6 +686,7 @@
                     const arrayBuffer = await pdfFile.arrayBuffer();
                     mergedPdf = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
                 } catch (error) {
+                    console.warn("Le PDF d'origine est incompatible avec la fusion. Création d'un rapport indépendant.", error);
                     mergedPdf = await PDFDocument.create(); 
                 }
             } else {
