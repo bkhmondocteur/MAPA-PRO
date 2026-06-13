@@ -432,18 +432,15 @@
             }
         });
 
-        // Fonction d'extraction 100% locale basée sur la structure texte de l'ABPM50 et DMS
         function extractMAPADataLocally(text, device) {
             let data = {};
             
             if (device === 'abpm50') {
-                // Recherche Identité ABPM50
                 let matchNom = text.match(/Nom:\s*([^0-9]+?)\s+(?:Homme|Female|Femme|Age|N°)/i);
                 if(matchNom) data.nomPatient = matchNom[1].trim();
                 let matchAge = text.match(/Age:\s*(\d+)/i);
                 if(matchAge) data.age = matchAge[1];
                 
-                // Recherche Moyennes ABPM50
                 let match24 = text.match(/24 heures\s*(\d{2,3})\/(\d{2,3})/i);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
                 let matchJour = text.match(/Jour\s*(\d{2,3})\/(\d{2,3})/i);
@@ -451,11 +448,9 @@
                 let matchNuit = text.match(/Nuit\s*(\d{2,3})\/(\d{2,3})/i);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
-                // Recherche FC
                 let matchFC = text.match(/24 heures FC.*?Moy\s*(\d+)/i);
                 if(matchFC) data.fc = matchFC[1];
                 
-                // Charge
                 let matchChargeSys = text.match(/Systole\s*\(.135\)\s*(\d+\.?\d*)%/i);
                 let matchChargeDia = text.match(/Diastole\s*\(.85\)\s*(\d+\.?\d*)%/i);
                 data.loadHigh = false;
@@ -463,14 +458,11 @@
                 if(matchChargeDia && parseFloat(matchChargeDia[1]) > 40) data.loadHigh = true;
 
             } else if (device === 'dms') {
-                // Recherche Identité DMS
                 let matchNom = text.match(/Nom Patient:\s*([^0-9]+?)\s+(?:Age|ID)/i);
                 if(matchNom) data.nomPatient = matchNom[1].trim();
                 let matchAge = text.match(/Age:\s*(\d+)/i);
                 if(matchAge) data.age = matchAge[1];
                 
-                // Recherche Moyennes DMS
-                // "Tout ... Moy: 136 (18.1) (<130) 78 (10.4) (<80) 76"
                 let idxTout = text.indexOf("Tout");
                 let idxJour = text.indexOf("Jour (");
                 let idxNuit = text.indexOf("Nuit (");
@@ -493,7 +485,7 @@
                 
                 if(idxNuit > -1) {
                     let strNuit = text.substring(idxNuit, text.indexOf("Systole(mmgh)", idxNuit));
-                    if(strNuit === "") strNuit = text.substring(idxNuit, idxNuit + 500); // safety
+                    if(strNuit === "") strNuit = text.substring(idxNuit, idxNuit + 500);
                     let mNuit = strNuit.match(/Moy:\s*(\d+).*?(\d+)/);
                     if(mNuit) { data.pasNuit = mNuit[1]; data.padNuit = mNuit[2]; }
                 }
@@ -522,7 +514,6 @@
                 const pdf = await loadingTask.promise;
                 let fullText = "";
 
-                // Lecture des 4 premières pages
                 for (let i = 1; i <= Math.min(pdf.numPages, 4); i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
@@ -531,10 +522,8 @@
 
                 const textClean = fullText.replace(/[\n\r"]/g, ' ').replace(/\s+/g, ' ');
                 
-                // Exécution de l'algorithme d'extraction locale
                 const extractedData = extractMAPADataLocally(textClean, deviceModel);
 
-                // Peuplement des champs HTML
                 if(extractedData.nomPatient) document.getElementById('nomPatient').value = extractedData.nomPatient;
                 if(extractedData.age) {
                     const parsedAge = parseInt(extractedData.age);
@@ -552,19 +541,16 @@
                 if(extractedData.padNuit) document.getElementById('padNuit').value = extractedData.padNuit;
                 if(extractedData.fc) document.getElementById('fcInput').value = extractedData.fc;
                 
-                // Déduction du Dipping si manquant
                 if(extractedData.dippingSys !== undefined) {
                     document.getElementById('dipSys').value = extractedData.dippingSys;
                 } else if(extractedData.pasJour && extractedData.pasNuit) {
                     document.getElementById('dipSys').value = (((extractedData.pasJour - extractedData.pasNuit) / extractedData.pasJour) * 100).toFixed(1);
                 }
                 
-                // Mise à jour de l'UI pour le profil de dipping
                 updateDippingUI();
 
                 if(extractedData.loadHigh !== undefined) document.getElementById('critCT').value = extractedData.loadHigh ? "Oui" : "Non";
 
-                // Affichage de la section manuelle pour vérification visuelle
                 document.getElementById('manualSection').classList.remove('hidden');
                 document.getElementById('manualSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -575,8 +561,15 @@
                 }
 
             } catch (err) {
-                console.error(err);
-                document.getElementById('statusMsg').innerHTML = "<span class='text-red-500 font-bold'>Échec de la lecture PDF. Entrez les données manuellement.</span>";
+                console.error("Erreur d'extraction locale :", err);
+                let errorMessage = "Échec de la lecture du fichier.";
+                
+                // Gestion spécifique de l'erreur d'image non lisible (Pas d'OCR)
+                if (err.message && err.message.includes("SOI not found")) {
+                    errorMessage = "Le fichier PDF contient une image illisible ou est un scan sans texte (Pas d'OCR).";
+                }
+                
+                document.getElementById('statusMsg').innerHTML = `<span class='text-red-500 font-bold'>${errorMessage} Saisissez les données manuellement.</span>`;
                 document.getElementById('manualSection').classList.remove('hidden');
             }
         });
