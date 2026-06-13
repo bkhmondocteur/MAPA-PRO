@@ -451,14 +451,14 @@
             if (device === 'abpm50') {
                 // EXCTRACTION ABPM50 CORRIGÉE
                 
-                // 1. Nom : Ignore "Homme/Femme" et s'arrête strictement sur "Age", "Âge" ou "N°"
-                let nomRaw = text.match(/(?:Nom|Patient)\s*:(.*?)(?:N°|N\s*°|\$N|Age|Âge|ID|Kobe|Date|Sexe)/i);
+                // 1. Nom : Ignore "Homme/Femme" et s'arrête strictement sur "Age:", "Âge:", "ID:" ou "N°"
+                let nomRaw = text.match(/(?:Nom|Patient)\s*:(.*?)(?:N°|N\s*°|\$N|Age\s*:|Âge\s*:|ID\s*:|Kobe|Date|Sexe\s*:)/i);
                 if (nomRaw) {
                     let n = nomRaw[1]
                         .replace(/Homme[\s\/\\]*Femme\s*:/i, '')
                         .replace(/Female|Male/i, '')
                         .replace(/patient\s*:/i, '')
-                        .replace(/(?:Age|Âge)\s*/i, '') // Efface "Âge" s'il a débordé
+                        .replace(/(?:Age|Âge)\s*/i, '') // Sécurité supplémentaire
                         .replace(/[^A-Za-zÀ-ÿ\s\-]/g, '')
                         .trim();
                     if (n) data.nomPatient = n;
@@ -474,13 +474,13 @@
                 }
                 
                 // 3. Tensions : Force la capture des valeurs IMMÉDIATES après le texte (les moyennes, pas les seuils)
-                let match24 = text.match(/24\s*heures\s*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
+                let match24 = text.match(/24\s*heures[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
                 if(match24) { data.pas24 = match24[1]; data.pad24 = match24[2]; }
                 
-                let matchJour = text.match(/Jour\s*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
+                let matchJour = text.match(/Jour[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
                 if(matchJour) { data.pasJour = matchJour[1]; data.padJour = matchJour[2]; }
                 
-                let matchNuit = text.match(/Nuit\s*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
+                let matchNuit = text.match(/Nuit[^\d]*(\d{2,3})\s*[\/\|\\]\s*(\d{2,3})/i);
                 if(matchNuit) { data.pasNuit = matchNuit[1]; data.padNuit = matchNuit[2]; }
                 
                 // 4. Fréquence Cardiaque : Saute par-dessus "Max" pour isoler "Moy"
@@ -496,7 +496,8 @@
 
             } else if (device === 'dms') {
                 // EXTRACTION DMS
-                let nomRaw = text.match(/Nom\s*Patient\s*:(.*?)(?:Age|ID|Sexe)/i);
+                // La regex cherche "Age:" ou "ID Patient:" complets pour ne pas couper un nom comme CHRID
+                let nomRaw = text.match(/Nom\s*Patient\s*:(.*?)(?:Age\s*:|ID\s*Patient|Sexe\s*:)/i);
                 if(nomRaw) data.nomPatient = nomRaw[1].replace(/[^A-Za-zÀ-ÿ\s\-]/g, '').trim();
                 
                 let ageRaw = text.match(/Age\s*:(.*?)(?:Sexe|Taille|Poids|ID)/i);
